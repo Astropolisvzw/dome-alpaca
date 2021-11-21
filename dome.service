@@ -1,0 +1,12 @@
+[Unit]
+Description=Astropolis Ash Dome - ASCOM Alpaca driver service
+After=network.target
+
+[Service]
+User=pi
+WorkingDirectory=/home/pi
+ExecStart=/home/pi/dev/dome-alpaca/start.sh
+
+[Install]
+WantedBy=multi-user.target
+
