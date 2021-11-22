@@ -1,22 +1,22 @@
 from bottle import route, get, put, post, request, response,run, template
 import bottle
 from dome import Dome
+import argparse
+import logging
 
 # ASCOM Reserved Error Numbers (https://ascom-standards.org/Developer/ASCOM%20Alpaca%20API%20Reference.pdf)
-# Condition                             Alpaca Error Number         COM Exception Number 
-# Successful transaction                0x0 (0)                     N/A 
-# Property or method not implemented    0x400 (1024)                0x80040400 
-# Invalid value                         0x401 (1025)                0x80040401 
-# Value not set                         0x402 (1026)                0x80040402 
-# Not connected                         0x407 (1031)                0x80040407 
-# Invalid while parked                  0x408 (1032)                0x80040408 
-# Invalid while slaved                  0x409 (1033)                0x80040409 
-# Invalid operation                     0x40B (1035)                0x8004040B 
+# Condition                             Alpaca Error Number         COM Exception Number
+# Successful transaction                0x0 (0)                     N/A
+# Property or method not implemented    0x400 (1024)                0x80040400
+# Invalid value                         0x401 (1025)                0x80040401
+# Value not set                         0x402 (1026)                0x80040402
+# Not connected                         0x407 (1031)                0x80040407
+# Invalid while parked                  0x408 (1032)                0x80040408
+# Invalid while slaved                  0x409 (1033)                0x80040409
+# Invalid operation                     0x40B (1035)                0x8004040B
 # Action not implemented                0x40C (1036)                0x8004040C
 
 
-bottle.debug(False)
-dome = Dome()
 
 def get_url(suffix):
     return f"/api/v1/dome/<device_number:int>/{suffix}"
@@ -59,7 +59,7 @@ def device_type_device_number_command_blind_put(device_type, device_number, comm
     """Transmits an arbitrary string to the device
 
     Transmits an arbitrary string to the device and does not wait for a response. Optionally, protocol framing characters may be added to the string before transmission. # noqa: E501
-   
+
     :rtype: MethodResponse
     """
     return 'do some magic!'
@@ -316,7 +316,7 @@ def dome_altitude_get(device_number):  # noqa: E501
     # except Exception as e:
     #     print("error was", e)
     ret = std_res(request)
-    ret['Value'] = dome.curr_alt 
+    ret['Value'] = dome.curr_alt
     response.status = 200
     return ret
 
@@ -337,7 +337,7 @@ def dome_at_home_get(device_number):  # noqa: E501
     :rtype: BoolResponse
     """
     ret = std_res(request)
-    ret['Value'] = dome.is_at_home() 
+    ret['Value'] = dome.is_at_home()
     response.status = 200
     return ret
 
@@ -358,7 +358,7 @@ def dome_at_park_get(device_number):  # noqa: E501
     :rtype: BoolResponse
     """
     ret = std_res(request)
-    ret['Value'] = dome.is_at_park() 
+    ret['Value'] = dome.is_at_park()
     response.status = 200
     return ret
 
@@ -380,7 +380,7 @@ def dome_azimuth_get(device_number):  # noqa: E501
     :rtype: DoubleResponse
     """
     ret = std_res(request)
-    ret['Value'] = dome.curr_az 
+    ret['Value'] = dome.curr_az
     response.status = 200
     return ret
 
@@ -811,5 +811,29 @@ def dome_sync_to_azimuth_put(device_number, azimuth=None, client_id=None, client
         ret['ErrorMessage'] = result['ErrorMessage']
     return ret
 
-#run(host='0.0.0.0', port=11111, reloader=True)
-run(host='0.0.0.0', port=11111, reloader=False, quiet=True)
+if __name__ == "__main__":
+    logger = logging.getLogger()
+    logger.setLevel(logging.INFO)
+    logging.basicConfig(format="%(asctime)s %(name)s: %(levelname)s %(message)s")
+    parser = argparse.ArgumentParser(description="Astropolis Ash Dome ASCOM Alpaca driver")
+    parser.add_argument(
+        "-v", "--verbose", help="Set logging to debug mode", action="store_true"
+    )
+    parser.add_argument(
+        "-l", "--logfile", help="Log to file", action="store_true"
+    )
+    args = parser.parse_args()
+    if args.verbose:
+        logger.setLevel(logging.DEBUG)
+    if args.logfile:
+        filehandler = f"{datadir}vastlog-{datenow:%Y%M%d-%H_%M_%S}.log"
+        fh = logging.FileHandler(filehandler)
+        fh.setLevel(logging.DEBUG if args.verbose else logging.INFO)
+        # add the handlers to the logger
+        logger.addHandler(fh)
+
+    bottle.debug(args.verbose)
+    dome = Dome()
+    logging.info("Starting Astropolis Ash Dome ASCOM Alpaca driver")
+    #run(host='0.0.0.0', port=11111, reloader=True)
+    run(host='0.0.0.0', port=11111, reloader=False, quiet=not args.verbose)
