@@ -36,7 +36,7 @@ class Dome:
             self.mc_serial.close()
         self.serial_port = serial_port
         self.mc_serial = ArduinoSerial(self.serial_port, self.serial_baud)
-        self.save_settings(self.dome_calc.park_pos, self.dome_calc.home_pos, self.steps_per_turn, self.turns_per_rotation, self.serial_port, self.serial_baud)
+        self.save_settings(self.dome_calc.park_pos, self.dome_calc.home_pos, self.dome_calc.steps_per_turn, self.dome_calc.turns_per_rotation, self.serial_port, self.serial_baud)
 
     def save_settings(self, park_pos, home_pos, spt, tpr, serial_port, serial_baud):
         config = ConfigParser()
