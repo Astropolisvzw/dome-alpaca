@@ -18,7 +18,7 @@ import logging
 # Action not implemented                0x40C (1036)                0x8004040C
 
 
-dome = Dome()
+dome = None
 
 def get_url(suffix):
     return f"/api/v1/dome/<device_number:int>/{suffix}"
@@ -831,7 +831,9 @@ if __name__ == "__main__":
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     if args.test:
-        encoder = FakeDome()
+        dome = FakeDome()
+    else:
+        dome = Dome()
     if args.logfile:
         filehandler = f"{datadir}vastlog-{datenow:%Y%M%d-%H_%M_%S}.log"
         fh = logging.FileHandler(filehandler)
@@ -840,7 +842,6 @@ if __name__ == "__main__":
         logger.addHandler(fh)
 
     bottle.debug(args.verbose)
-    dome = Dome()
     logging.info("Starting Astropolis Ash Dome ASCOM Alpaca driver")
     #run(host='0.0.0.0', port=11111, reloader=True)
     run(host='0.0.0.0', port=11111, reloader=False, quiet=not args.verbose)

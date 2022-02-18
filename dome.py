@@ -13,30 +13,32 @@ class Dome:
     slaved = False
     curr_pos: DomePos = None
     serial_port: str = None
+    serial_baud: int = None
     mc_serial: ArduinoSerial = None
     dome_calc = DomeCalc()
     config_file: str = ''
 
     def __init__(self, config_file='ap_ashdome_config.ini'):
         self.config_file = config_file
-        park_pos, home_pos, spt, tpr, serial_port = self.load_settings()
+        park_pos, home_pos, spt, tpr, serial_port, serial_baud = self.load_settings()
         self.dome_calc.update_params(park_pos, home_pos, spt, tpr)
         self.serial_port = serial_port
-        self.set_serial_port(self.serial_port)
+        self.serial_baud = serial_baud
+        self.set_serial_port(self.serial_port, self.serial_baud)
         self.park_pos = park_pos
         self.home_pos = home_pos
         self.steps_per_turn = spt
         self.turns_per_rotation = tpr
         logging.info(f"Inited dome with park: {self.dome_calc.park_pos}, home: {self.dome_calc.home_pos}, spt: {spt}, tpr: {tpr}, serial port: {serial_port}")
 
-    def set_serial_port(self, serial_port):
+    def set_serial_port(self, serial_port, serial_baud):
         if self.mc_serial is not None:
             self.mc_serial.close()
         self.serial_port = serial_port
-        self.mc_serial = ArduinoSerial(self.serial_port)
-        self.save_settings(self.dome_calc.park_pos, self.dome_calc.home_pos, self.steps_per_turn, self.turns_per_rotation, self.serial_port)
+        self.mc_serial = ArduinoSerial(self.serial_port, self.serial_baud)
+        self.save_settings(self.dome_calc.park_pos, self.dome_calc.home_pos, self.steps_per_turn, self.turns_per_rotation, self.serial_port, self.serial_baud)
 
-    def save_settings(self, park_pos, home_pos, spt, tpr, serial_port):
+    def save_settings(self, park_pos, home_pos, spt, tpr, serial_port, serial_baud):
         config = ConfigParser()
         config.read(self.config_file)
         section = 'domeparams'
@@ -50,13 +52,14 @@ class Dome:
         config.set(section, 'steps_per_turn', str(spt))
         config.set(section, 'turns_per_rotation', str(tpr))
         config.set(section, 'serial_port', serial_port)
+        config.set(section, 'serial_baud', str(serial_baud))
         with open(self.config_file, 'w') as f:
             config.write(f)
 
     def load_settings(self):
         if not os.path.isfile(self.config_file):
             logging.error(f"Couldn't find ini file {self.config_file}")
-            self.save_settings(DomePos(), DomePos(), 0,0, 'serial')
+            self.save_settings(DomePos(), DomePos(), 0,0, 'serial', 9600)
             exit()
         config = ConfigParser()
         section = 'domeparams'
@@ -70,7 +73,8 @@ class Dome:
         spt = config.getint(section, 'steps_per_turn')
         tpr = config.getfloat(section, 'turns_per_rotation')
         serial_port = config.get(section, 'serial_port')
-        return DomePos(az=park_az, steps=park_steps, turns=park_turns), DomePos(az = home_az, steps=home_steps, turns=home_turns), spt, tpr, serial_port
+        serial_baud = config.getint(section, 'serial_baud')
+        return DomePos(az=park_az, steps=park_steps, turns=park_turns), DomePos(az = home_az, steps=home_steps, turns=home_turns), spt, tpr, serial_port, serial_baud
 
     # get azimuth and check if it's near the home position
     def is_at_home(self, degree_tolerance: float = 0.5):
@@ -129,6 +133,7 @@ class Dome:
         turns, check2 = self.mc_serial.get_turns()
         if check1 and check2:
             self.curr_pos = self.dome_calc.steps_turn_to_az(steps, turns)
+            logging.debug(f"Dome updating azimuth: {steps=}, {turns=}, {self.curr_pos=}")
         else:
             logging.debug(f"Error in checksum: {steps=}, {check1=}, {turns=}, {check2=}")
 

@@ -57,11 +57,11 @@ class ArduinoSerial:
             return result
 
     def _send_command_with_two_results(self, command):
-        logging.debug(f"Writing {command}")
+        logging.debug(f"ArduinoSerial: writing {command}")
         self.serial_port.write(command)
         plowbyte = self.serial_port.read(1)
         phighbyte = self.serial_port.read(1)
-        logging.debug(f"Received P result: {plowbyte}, {phighbyte}")
+        logging.debug(f"ArduinoSerial: received {command} result: {plowbyte}, {phighbyte}")
         resp, real_result = self._process_results(plowbyte, phighbyte)
         check = ec.check_checksum(resp)
         return resp, real_result, check, plowbyte, phighbyte

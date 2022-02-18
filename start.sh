@@ -1,2 +1,2 @@
 #!/bin/sh
-python3 APAshDomeServer.py
+python3 APAshDomeServer.py $*
