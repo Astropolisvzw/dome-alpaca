@@ -1,6 +1,7 @@
 from bottle import route, get, put, post, request, response,run, template
 import bottle
 from dome import Dome
+from fake_dome import FakeDome
 import argparse
 import logging
 
@@ -17,6 +18,7 @@ import logging
 # Action not implemented                0x40C (1036)                0x8004040C
 
 
+dome = Dome()
 
 def get_url(suffix):
     return f"/api/v1/dome/<device_number:int>/{suffix}"
@@ -316,7 +318,7 @@ def dome_altitude_get(device_number):  # noqa: E501
     # except Exception as e:
     #     print("error was", e)
     ret = std_res(request)
-    ret['Value'] = dome.curr_alt
+    ret['Value'] = 0 # dome altitude is always zero
     response.status = 200
     return ret
 
@@ -380,7 +382,7 @@ def dome_azimuth_get(device_number):  # noqa: E501
     :rtype: DoubleResponse
     """
     ret = std_res(request)
-    ret['Value'] = dome.curr_az
+    ret['Value'] = dome.get_azimuth()
     response.status = 200
     return ret
 
@@ -401,7 +403,7 @@ def dome_can_find_home_get(device_number):  # noqa: E501
     :rtype: BoolResponse
     """
     ret = std_res(request)
-    ret['Value'] = True
+    ret['Value'] = False
     response.status = 200
     return ret
 
@@ -822,9 +824,14 @@ if __name__ == "__main__":
     parser.add_argument(
         "-l", "--logfile", help="Log to file", action="store_true"
     )
+    parser.add_argument(
+        "-t", "--test", help="Use a fake dome encoder", action="store_true"
+    )
     args = parser.parse_args()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
+    if args.test:
+        encoder = FakeDome()
     if args.logfile:
         filehandler = f"{datadir}vastlog-{datenow:%Y%M%d-%H_%M_%S}.log"
         fh = logging.FileHandler(filehandler)
