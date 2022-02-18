@@ -27,6 +27,7 @@ class DomeCalc:
     def update_params(self, park_pos: DomePos, home_pos: DomePos, steps_per_turn, turns_per_rotation):
         self.park_pos = park_pos
         self.home_pos = home_pos
+        self.north_pos = DomePos()
         self.steps_per_turn = steps_per_turn
         self.turns_per_rotation = turns_per_rotation
         self.degree_per_turn = 360/turns_per_rotation

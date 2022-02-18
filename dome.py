@@ -3,6 +3,7 @@ from configparser import ConfigParser
 import logging
 from dome_calc import DomeCalc
 from dome_calc import DomePos
+import os
 
 class Dome:
     connected = False
@@ -40,31 +41,35 @@ class Dome:
         config.read(self.config_file)
         section = 'domeparams'
         config.add_section(section)
-        config.set(section, 'park_az', park_pos.az)
-        config.set(section, 'park_steps', park_pos.steps)
-        config.set(section, 'park_turns', park_pos.turns)
-        config.set(section, 'home_az', home_pos.az)
-        config.set(section, 'home_steps', home_pos.steps)
-        config.set(section, 'home_turns', home_pos.turns)
-        config.set(section, 'steps_per_turn', spt)
-        config.set(section, 'turns_per_rotation', tpr)
+        config.set(section, 'park_az', str(park_pos.az))
+        config.set(section, 'park_steps', str(park_pos.steps))
+        config.set(section, 'park_turns', str(park_pos.turns))
+        config.set(section, 'home_az', str(home_pos.az))
+        config.set(section, 'home_steps', str(home_pos.steps))
+        config.set(section, 'home_turns', str(home_pos.turns))
+        config.set(section, 'steps_per_turn', str(spt))
+        config.set(section, 'turns_per_rotation', str(tpr))
         config.set(section, 'serial_port', serial_port)
         with open(self.config_file, 'w') as f:
             config.write(f)
 
     def load_settings(self):
+        if not os.path.isfile(self.config_file):
+            logging.error(f"Couldn't find ini file {self.config_file}")
+            self.save_settings(DomePos(), DomePos(), 0,0, 'serial')
+            exit()
         config = ConfigParser()
         section = 'domeparams'
         config.read(self.config_file)
         park_az = config.getint(section, 'park_az')
-        park_steps = config.set(section, 'park_steps')
-        park_turns = config.set(section, 'park_turns')
+        park_steps = config.getint(section, 'park_steps')
+        park_turns = config.getint(section, 'park_turns')
         home_az = config.getint(section, 'home_az')
         home_steps = config.getint(section, 'home_steps')
         home_turns = config.getint(section, 'home_turns')
-        spt = config.int(section, 'steps_per_turn', spt)
-        tpr = config.getfloat(section, 'turns_per_rotation', tpr)
-        serial_port = config.get(section, 'serial_port', serial_port)
+        spt = config.getint(section, 'steps_per_turn')
+        tpr = config.getfloat(section, 'turns_per_rotation')
+        serial_port = config.get(section, 'serial_port')
         return DomePos(az=park_az, steps=park_steps, turns=park_turns), DomePos(az = home_az, steps=home_steps, turns=home_turns), spt, tpr, serial_port
 
     # get azimuth and check if it's near the home position

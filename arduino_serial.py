@@ -23,8 +23,8 @@ class ArduinoSerial:
         self.close()
 
     def close(self):
-        if self.mc_serial is not None:
-            self.mc_serial.close()
+        if self.serial_port is not None:
+            self.serial_port.close()
 
     def get_version(self):
         return self._send_command_with_one_result(self.version)
