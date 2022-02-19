@@ -43,5 +43,5 @@ class DomeCalc:
 
     def steps_turn_to_pos(self, steps, turns):
         rotpos = self.get_rotpos(steps, turns)
-        print(f"steps_turn_to_az({steps=}, {turns=}) - {rotpos=}, {rotpos-self.north_rotpos=}")
-        return DomePos(az=((rotpos - self.north_rotpos)*self.degree_per_turn) % 360, steps=steps, turns=turns)
+        logging.debug(f"steps_turn_to_az({steps=}, {turns=}) - {rotpos=}, {rotpos-self.north_pos.rotpos=}")
+        return DomePos(az=((rotpos - self.north_pos.rotpos)*self.degree_per_turn) % 360, steps=steps, turns=turns)

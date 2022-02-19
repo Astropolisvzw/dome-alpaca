@@ -42,7 +42,6 @@ class Dome:
         config = ConfigParser()
         config.read(self.config_file)
         section = 'domeparams'
-        config.add_section(section)
         config.set(section, 'park_az', str(park_pos.az))
         config.set(section, 'park_steps', str(park_pos.steps))
         config.set(section, 'park_turns', str(park_pos.turns))
@@ -132,7 +131,7 @@ class Dome:
         steps, check1 = self.mc_serial.get_steps()
         turns, check2 = self.mc_serial.get_turns()
         if check1 and check2:
-            self.curr_pos = self.dome_calc.steps_turn_to_az(steps, turns)
+            self.curr_pos = self.dome_calc.steps_turn_to_pos(steps, turns)
             logging.debug(f"Dome updating azimuth: {steps=}, {turns=}, {self.curr_pos=}")
         else:
             logging.debug(f"Error in checksum: {steps=}, {check1=}, {turns=}, {check2=}")
