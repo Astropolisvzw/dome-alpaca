@@ -59,5 +59,5 @@ class DomeCalc:
         else:
             # Rotate the other direction towards target.
             direction = self.LEFT if current_az < target_az else self.RIGHT;
-        print(f"Currentaz = {current_az}, {target_az=}")
+        logging.debug(f"Currentaz = {current_az}, {target_az=}, {direction=}")
         return direction, diff
