@@ -47,7 +47,7 @@ class ArduinoSerial:
         return result, check
 
     def enable_relay(self, relayNr, seconds):
-        results = self._generic_send_command_get_result(self, [self.characterN, relayNr, seconds], 1)
+        results = self._generic_send_command_get_result([self.characterN, relayNr, seconds], 1)
         if len(results) != 1 and results[0] != seconds:
             logging.error("Did not receive expected result, {results=}")
 
