@@ -820,12 +820,11 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s %(name)s: %(levelname)s %(message)s")
     parser = argparse.ArgumentParser(description="Astropolis Ash Dome ASCOM Alpaca driver")
     parser.add_argument(
-        "-v", "--verbose", help="Set logging to debug mode", action="store_true"
+        "-v", "--verbose", help="Set logging to verbose mode", action="store_true"
     )
     parser.add_argument(
-        "-v", "--verbose", help="Set logging to debug mode", action="store_true"
+        "-vv", "--veryverbose", help="Set logging to debug mode", action="store_true"
     )
-
     parser.add_argument(
         "-l", "--logfile", help="Log to file", action="store_true"
     )
@@ -834,7 +833,10 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     if args.verbose:
+        logger.setLevel(logging.INFO)
+    if args.veryverbose:
         logger.setLevel(logging.DEBUG)
+
     if args.test:
         dome = FakeDome()
     else:
