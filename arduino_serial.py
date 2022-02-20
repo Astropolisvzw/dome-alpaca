@@ -1,14 +1,23 @@
+from typing import List
 from serial import Serial
 import serial
 import encoder_checksum as ec
 import logging
+
+
 
 class ArduinoSerial:
     serial_port = None
     characterT = 'T'.encode('utf-8')
     characterP = 'P'.encode('utf-8')
     characterR = 'R'.encode('utf-8')
+    characterN = 'N'.encode('utf-8')
     version = 0x40 # @ char
+
+    RELAY_UP_IDX= 0
+    RELAY_DOWN_IDX=1
+    RELAY_LEFT_IDX=2
+    RELAY_RIGHT_IDX=3
 
     def __init__(self, port, baud=9600, timeout=5):
         self.serial_port = Serial(port=port,
@@ -27,15 +36,23 @@ class ArduinoSerial:
             self.serial_port.close()
 
     def get_version(self):
-        return self._send_command_with_one_result(self.version)
+        return self._generic_send_command_get_result([self.version], 1)
 
     def get_steps(self):
-        _, result, check, _, _ = self._send_command_with_two_results(self.characterP)
+        _, result, check, _, _ = self._send_command_to_AMT(self.characterP)
         return result, check
 
     def get_turns(self):
-        _, result, check, _, _ = self._send_command_with_two_results(self.characterT)
+        _, result, check, _, _ = self._send_command_to_AMT(self.characterT)
         return result, check
+
+    def enable_relay(self, relayNr, seconds):
+        results = self._generic_send_command_get_result(self, [self.characterN, relayNr, seconds], 1)
+        if len(results) != 1 and results[0] != seconds:
+            logging.error("Did not receive expected result, {results=}")
+
+    def disable_relay(self, relayNr):
+        self.enable_relay(relayNr, 0)
 
     def _process_results(self, lowbyte, highbyte):
             try:
@@ -50,17 +67,21 @@ class ArduinoSerial:
             real_value = ec.get_result(wordresult)
             return wordresult, real_value
 
-    def _send_command_with_one_result(self, command):
-            logging.debug(f"Writing {command}")
-            self.serial_port.write(command)
-            result = self.serial_port.read(1)
-            return result
 
-    def _send_command_with_two_results(self, command):
+    def _generic_send_command_get_result(self, commands, nr_results: int):
+            logging.debug(f"Writing {commands}, reading {nr_results} result")
+            results = []
+            for command in commands:
+                self.serial_port.write(command)
+
+            for _ in range(0, nr_results):
+                results.append(self.serial_port.read(1))
+
+            return results
+
+    def _send_command_to_AMT(self, command):
         logging.debug(f"ArduinoSerial: writing {command}")
-        self.serial_port.write(command)
-        plowbyte = self.serial_port.read(1)
-        phighbyte = self.serial_port.read(1)
+        plowbyte, phighbyte = self._generic_send_command_get_result([command], 2)
         logging.debug(f"ArduinoSerial: received {command} result: {plowbyte}, {phighbyte}")
         resp, real_result = self._process_results(plowbyte, phighbyte)
         check = ec.check_checksum(resp)

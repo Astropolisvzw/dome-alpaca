@@ -4,6 +4,8 @@ import logging
 from dome_calc import DomeCalc
 from dome_calc import DomePos
 import os
+from utils import synchronized_method
+from time import sleep
 
 class Dome:
     connected = False
@@ -86,8 +88,10 @@ class Dome:
         self._update_azimuth()
         return abs(self.curr_pos.az - self.dome_calc.park_pos.az) < degree_tolerance
 
+    # 0 = Open, 1 = Closed, 2 = Opening, 3 = Closing, 4 = Shutter status error
     def close_shutter(self):
         self.shutter = 3
+        self.mc_serial.enable_relay(self.mc_serial.RELAY_DOWN_IDX, 10)
         self.shutter = 1
 
     def abort_slew(self):
@@ -95,6 +99,7 @@ class Dome:
 
     def open_shutter(self):
         self.shutter = 2
+        self.mc_serial.enable_relay(self.mc_serial.RELAY_UP_IDX, 10)
         self.shutter = 0
 
     def find_home(self):
@@ -127,7 +132,7 @@ class Dome:
         self._update_azimuth()
         return self.curr_pos.az
 
-
+    @synchronized_method
     def _update_azimuth(self):
         steps, check1 = self.mc_serial.get_steps()
         turns, check2 = self.mc_serial.get_turns()
@@ -152,9 +157,28 @@ class Dome:
             return res
         # TODO: DO SOMETHING REAL
         self.slewing = True
+        ## call dome_calc to get direction and distance
+
+        RELAY_IDX, diff = self._slew_update(target_az)
+        while(diff > 0.5):
+            ## enable relay in correct direction
+            ## loop until distance < 0.5 degree OR takes too long
+            self.mc_serial.enable_relay(RELAY_IDX, 1)
+            sleep(100)
+            RELAY_IDX, diff = self._slew_update(target_az)
+
+
+
+
         self.curr_az = target_az
         self.slewing = False
         return {'OK': True}
+
+    def _slew_update(self, target_az: float):
+        current_az = self.get_azimuth() # also updates
+        direction, diff = self.dome_calc.rotation_direction(current_az, target_az)
+        RELAY_IDX = self.mc_serial.RELAY_LEFT_IDX if direction == self.dome_calc.LEFT else self.mc_serial.RELAY_RIGHT_IDX
+        return RELAY_IDX, diff
 
     def synctoazimuth(self, target_az: float):
         #print(f"Getting synctoazimuth with curr az = {self.curr_az}, target az = {target_az}")

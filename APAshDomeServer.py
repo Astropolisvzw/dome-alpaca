@@ -788,6 +788,7 @@ def dome_slewing_get(device_number):  # noqa: E501
     response.status = 200
     return ret
 
+# TODO !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
 @put(get_url('synctoazimuth'))
 def dome_sync_to_azimuth_put(device_number, azimuth=None, client_id=None, client_transaction_id=None):  # noqa: E501
     """Synchronize the current position of the dome to the given azimuth.
@@ -821,6 +822,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "-v", "--verbose", help="Set logging to debug mode", action="store_true"
     )
+    parser.add_argument(
+        "-v", "--verbose", help="Set logging to debug mode", action="store_true"
+    )
+
     parser.add_argument(
         "-l", "--logfile", help="Log to file", action="store_true"
     )

@@ -20,6 +20,8 @@ class DomeCalc:
     degree_per_turn = 0
     degree_per_step = 0
     turn_per_degree = 0
+    LEFT = 1
+    RIGHT = 2
 
     def __init__(self):
         return
@@ -45,3 +47,17 @@ class DomeCalc:
         rotpos = self.get_rotpos(steps, turns)
         print(f"steps_turn_to_az({steps=}, {turns=}) - {rotpos=}, {rotpos-self.north_rotpos=}")
         return DomePos(az=((rotpos - self.north_rotpos)*self.degree_per_turn) % 360, steps=steps, turns=turns)
+
+    def rotation_direction(self, current_az, target_az):
+        direction = 0
+        diff = abs(current_az - target_az)
+        if diff == 0:
+            direction = 0
+        if diff < 180:
+            # Rotate current directly towards target.
+            direction = self.RIGHT if current_az < target_az else self.LEFT;
+        else:
+            # Rotate the other direction towards target.
+            direction = self.LEFT if current_az < target_az else self.RIGHT;
+        print(f"Currentaz = {current_az}, {target_az=}")
+        return direction, diff
