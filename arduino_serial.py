@@ -72,10 +72,10 @@ class ArduinoSerial:
             logging.debug(f"Writing {commands}, reading {nr_results} result")
             results = []
             for command in commands:
-                if isinstance(command, str)
-                    self.serial_port.write(command)
-                else:
+                if isinstance(command, int):
                     self.serial_port.write(struct.pack('!B',command))
+                else:
+                    self.serial_port.write(command)
 
             for _ in range(0, nr_results):
                 results.append(self.serial_port.read(1))
