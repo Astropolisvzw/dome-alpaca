@@ -3,7 +3,7 @@ from serial import Serial
 import serial
 import encoder_checksum as ec
 import logging
-
+import struct
 
 
 class ArduinoSerial:
@@ -72,7 +72,10 @@ class ArduinoSerial:
             logging.debug(f"Writing {commands}, reading {nr_results} result")
             results = []
             for command in commands:
-                self.serial_port.write(command)
+                if isinstance(command, str)
+                    self.serial_port.write(command)
+                else:
+                    self.serial_port.write(struct.pack('!B',command))
 
             for _ in range(0, nr_results):
                 results.append(self.serial_port.read(1))
