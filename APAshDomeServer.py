@@ -763,7 +763,7 @@ def dome_slew_to_azimuth_put(device_number, azimuth=None, client_id=None, client
     """
     ret = std_res(request)
     try:
-        dome.slew_to_az(_float(request.forms.Azimuth))
+        asyncio.create_task(dome.slew_to_az(_float(request.forms.Azimuth)))
     except:
         ret['ErrorNumber'] = result[1024]
         ret['ErrorMessage'] = result['Error during dome communication']
