@@ -1,3 +1,4 @@
+import asyncio
 from bottle import route, get, put, post, request, response,run, template
 import bottle
 from dome import Dome
@@ -761,11 +762,12 @@ def dome_slew_to_azimuth_put(device_number, azimuth=None, client_id=None, client
     :rtype: MethodResponse
     """
     ret = std_res(request)
-    result = dome.slew_to_az(_float(request.forms.Azimuth))
+    try:
+        dome.slew_to_az(_float(request.forms.Azimuth))
+    except:
+        ret['ErrorNumber'] = result[1024]
+        ret['ErrorMessage'] = result['Error during dome communication']
     response.status = 200
-    if(not result['OK']):
-        ret['ErrorNumber'] = result['ErrorNumber']
-        ret['ErrorMessage'] = result['ErrorMessage']
     return ret
 
 @get(get_url('slewing'))
@@ -851,4 +853,4 @@ if __name__ == "__main__":
     bottle.debug(args.verbose)
     logging.info("Starting Astropolis Ash Dome ASCOM Alpaca driver")
     #run(host='0.0.0.0', port=11111, reloader=True)
-    run(host='0.0.0.0', port=11111, reloader=False, quiet=not args.verbose)
+    asyncio.run(run(host='0.0.0.0', port=11111, reloader=False, quiet=not args.verbose))

@@ -150,7 +150,7 @@ class Dome:
             return False, result
         return True, None
 
-    def slew_to_az(self, target_az: float):
+    async def slew_to_az(self, target_az: float):
         checkok, res = self._check_azimuth(target_az)
         if not checkok:
             return res
