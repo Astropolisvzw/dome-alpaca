@@ -158,12 +158,13 @@ class Dome:
         self.slewing = True
         ## call dome_calc to get direction and distance
         RELAY_IDX, diff = self._slew_update(target_az)
+        logging.info(f"Slewing to azimuth: {target_az=}, {self.curr_pos.az=}")
         while(diff > 0.5):
             logging.debug(f"Slewing, diff is {diff}")
             ## enable relay in correct direction
             ## loop until distance < 0.5 degree OR takes too long
-            self.mc_serial.enable_relay(RELAY_IDX, 1)
-            sleep(0.1)
+            self.mc_serial.enable_relay(RELAY_IDX, 10)
+            sleep(5)
             RELAY_IDX, diff = self._slew_update(target_az)
         self.mc_serial.enable_relay(RELAY_IDX, 0) # stop dome slewing
         self.slewing = False

@@ -72,6 +72,7 @@ class ArduinoSerial:
             logging.debug(f"Writing {commands}, reading {nr_results} result")
             results = []
             for command in commands:
+                # current commands are either pre-UTF8'ed strings, or ints that need to be packed
                 if isinstance(command, int):
                     self.serial_port.write(struct.pack('!B',command))
                 else:
