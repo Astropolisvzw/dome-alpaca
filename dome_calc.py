@@ -1,6 +1,7 @@
 import logging
 from collections import namedtuple
 from dataclasses import dataclass
+from utils import RELAY_DOWN_IDX, RELAY_UP_IDX, RELAY_LEFT_IDX, RELAY_RIGHT_IDX
 
 @dataclass
 class DomePos:
@@ -20,8 +21,8 @@ class DomeCalc:
     degree_per_turn = 0
     degree_per_step = 0
     turn_per_degree = 0
-    LEFT = 1
-    RIGHT = 2
+    LEFT = RELAY_LEFT_IDX
+    RIGHT = RELAY_RIGHT_IDX
 
     def __init__(self):
         return
@@ -45,19 +46,46 @@ class DomeCalc:
 
     def steps_turn_to_pos(self, steps, turns):
         rotpos = self.get_rotpos(steps, turns)
-        logging.debug(f"steps_turn_to_az({steps=}, {turns=}) - {rotpos=}, {rotpos-self.north_pos.rotpos=}")
+        result = DomePos(az=((rotpos - self.north_pos.rotpos)*self.degree_per_turn) % 360, steps=steps, turns=turns)
+        logging.info(f"Arduino to degrees: {result.az} deg ({steps=}, {turns=})")
         return DomePos(az=((rotpos - self.north_pos.rotpos)*self.degree_per_turn) % 360, steps=steps, turns=turns)
 
-    def rotation_direction(self, current_az, target_az):
-        direction = 0
-        diff = abs(current_az - target_az)
-        if diff == 0:
-            direction = 0
-        if diff < 180:
+    def rotation_direction(self, current_az, target_az, limits, limitscounter):
+        LEFT = self.LEFT
+        RIGHT= self.RIGHT
+        diff1 = (target_az - current_az)%360
+        if diff1 == 0:
+            direction = RIGHT
+            diff = 0
+        if diff1 == 180:
+            logging.info("180 degrees, going towards the shortest cable")
+            direction = RIGHT if limitscounter[RIGHT] < abs(limitscounter[LEFT]) else LEFT
+        if current_az + 180 > target_az:
             # Rotate current directly towards target.
-            direction = self.RIGHT if current_az < target_az else self.LEFT;
+            direction = RIGHT
+            diff = diff1
         else:
             # Rotate the other direction towards target.
-            direction = self.LEFT if current_az < target_az else self.RIGHT;
-        logging.debug(f"Currentaz = {current_az}, {target_az=}, {direction=}")
+            direction = LEFT
+            diff = current_az + 360 - target_az
+
+        logging.info(f"Orig result: {'LEFT' if direction==LEFT else 'RIGHT'}, {diff1=}, {diff=}, {str(limitscounter)=}")
+        if direction == LEFT:
+            total_left = limitscounter[LEFT] - diff
+            logging.info(f"{total_left=}, {limitscounter[RIGHT]=}")
+            if total_left+limitscounter[RIGHT] < limits[LEFT]:
+                logging.info("cable length violation")
+                direction = RIGHT
+                diff = 360 - diff
+                limitscounter[RIGHT] = limitscounter[RIGHT] + diff
+        else:
+            total_right = limitscounter[RIGHT] + diff
+            logging.info(f"{limitscounter[LEFT]=}, {total_right=}")
+            if limitscounter[LEFT]+total_right > limits[RIGHT]:
+                logging.info("cable length violation")
+                direction = LEFT
+                diff = 360 - diff
+                limitscounter[LEFT] = limitscounter[LEFT] + diff
+
+        logging.info(f"result: {'LEFT' if direction==LEFT else 'RIGHT'}, {diff1=}, {diff=}, {str(limitscounter)=}")
         return direction, diff

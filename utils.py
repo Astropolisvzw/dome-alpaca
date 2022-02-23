@@ -26,3 +26,8 @@ def synchronized_method(method):
                 return method(self, *args, **kws)
 
     return sync_method
+
+RELAY_UP_IDX= 0
+RELAY_DOWN_IDX=1
+RELAY_LEFT_IDX=2
+RELAY_RIGHT_IDX=3

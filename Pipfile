@@ -6,6 +6,7 @@ name = "pypi"
 [packages]
 bottle = "*"
 pyserial = "*"
+cachetools = "*"
 
 [dev-packages]
 pylint = "*"

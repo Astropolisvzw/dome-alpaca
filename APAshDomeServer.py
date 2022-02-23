@@ -1,4 +1,3 @@
-import asyncio
 from bottle import route, get, put, post, request, response,run, template
 import bottle
 from dome import Dome
@@ -762,12 +761,10 @@ def dome_slew_to_azimuth_put(device_number, azimuth=None, client_id=None, client
     :rtype: MethodResponse
     """
     ret = std_res(request)
-    try:
-        asyncio.create_task(dome.slew_to_az(_float(request.forms.Azimuth)))
-    except:
-        ret['ErrorNumber'] = result[1024]
-        ret['ErrorMessage'] = result['Error during dome communication']
+    # try:
+    dome.slew_to_az(_float(request.forms.Azimuth))
     response.status = 200
+    logging.info(f"returning from slew {ret}")
     return ret
 
 @get(get_url('slewing'))
@@ -786,7 +783,7 @@ def dome_slewing_get(device_number):  # noqa: E501
     :rtype: BoolResponse
     """
     ret = std_res(request)
-    ret['Value'] = dome.slewing
+    ret['Value'] = dome.get_slewing()
     response.status = 200
     return ret
 
@@ -836,8 +833,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
     if args.verbose:
         logger.setLevel(logging.INFO)
+        # logging.getLogger("asyncio").setLevel(logging.DEBUG)
     if args.veryverbose:
         logger.setLevel(logging.DEBUG)
+        # logging.getLogger("asyncio").setLevel(logging.DEBUG)
 
     if args.test:
         dome = FakeDome()
@@ -853,4 +852,4 @@ if __name__ == "__main__":
     bottle.debug(args.verbose)
     logging.info("Starting Astropolis Ash Dome ASCOM Alpaca driver")
     #run(host='0.0.0.0', port=11111, reloader=True)
-    asyncio.run(run(host='0.0.0.0', port=11111, reloader=False, quiet=not args.verbose))
+    run(host='0.0.0.0', port=11111, reloader=False, quiet=not args.verbose)
