@@ -59,7 +59,7 @@ class DomeCalc:
             diff = 0
         if diff1 == 180:
             logging.info("180 degrees, going towards the shortest cable")
-            direction = RIGHT if limitscounter[RIGHT] < abs(limitscounter[LEFT]) else LEFT
+            direction = RIGHT if limitscounter[RIGHT] < limitscounter[LEFT] else LEFT
         if current_az + 180 > target_az:
             # Rotate current directly towards target.
             direction = RIGHT
@@ -70,22 +70,19 @@ class DomeCalc:
             diff = current_az + 360 - target_az
 
         logging.info(f"Orig result: {'LEFT' if direction==LEFT else 'RIGHT'}, {diff1=}, {diff=}, {str(limitscounter)=}")
+        total_direction = limitscounter[direction] + diff
         if direction == LEFT:
-            total_left = limitscounter[LEFT] - diff
-            logging.info(f"{total_left=}, {limitscounter[RIGHT]=}")
-            if total_left+limitscounter[RIGHT] < limits[LEFT]:
+            logging.info(f"{total_direction=}, {limitscounter[RIGHT]=}")
+            if total_direction-limitscounter[RIGHT] > limits[LEFT]:
                 logging.info("cable length violation")
                 direction = RIGHT
                 diff = 360 - diff
-                limitscounter[RIGHT] = limitscounter[RIGHT] + diff
         else:
-            total_right = limitscounter[RIGHT] + diff
-            logging.info(f"{limitscounter[LEFT]=}, {total_right=}")
-            if limitscounter[LEFT]+total_right > limits[RIGHT]:
+            logging.info(f"{limitscounter[LEFT]=}, {total_direction=}")
+            if limitscounter[RIGHT]-total_direction > limits[RIGHT]:
                 logging.info("cable length violation")
                 direction = LEFT
                 diff = 360 - diff
-                limitscounter[LEFT] = limitscounter[LEFT] + diff
 
         logging.info(f"result: {'LEFT' if direction==LEFT else 'RIGHT'}, {diff1=}, {diff=}, {str(limitscounter)=}")
         return direction, diff

@@ -22,7 +22,7 @@ class Dome:
     dome_calc = DomeCalc()
     config_file: str = ''
     # limits  = {RELAY_LEFT_IDX: -270, RELAY_RIGHT_IDX: 270}
-    limits  = {RELAY_LEFT_IDX: -180, RELAY_RIGHT_IDX: 180}
+    limits  = {RELAY_LEFT_IDX: 180, RELAY_RIGHT_IDX: 180}
 
     manager = Manager()
     ns = manager.Namespace()
@@ -195,14 +195,18 @@ class Dome:
         self.ns.slewing = True
         ## call dome_calc to get direction and distance
         RELAY_IDX, diff = self._slew_update(target_az)
-        logging.info(f"Slewing to azimuth: {target_az=}, {self.curr_pos.az=}")
+        logging.debug(f"Slewing to azimuth: {target_az=}, {self.curr_pos.az=}")
         while(diff > 0.5 and not self.ns.aborted):
-            logging.info(f"Slewing, diff is {diff}, {RELAY_IDX=}")
+            logging.info(f"Slewing, diff is {diff}, {RELAY_IDX=}, {target_az=}, {self.curr_pos.az=}")
             ## enable relay in correct direction
             ## loop until distance < 0.5 degree OR takes too long
             self.mc_serial.enable_relay(RELAY_IDX, 10)
             sleep(1)
+            diffold = diff
             _, diff = self._slew_update(target_az)
+            diffdiff = abs(diff - diffold)
+            # update the limitscounter with the changes between last run and this run
+            self.ns.limitscounter[RELAY_IDX] = self.ns.limitscounter[RELAY_IDX] + diffdiff
             logging.info(f"After slewing, diff is {diff}, {target_az=}, {self.curr_pos.az=} {RELAY_IDX=}")
         logging.info(f"Slew solved, diff is {diff}")
         self.mc_serial.enable_relay(RELAY_IDX, 0) # stop dome slewing
