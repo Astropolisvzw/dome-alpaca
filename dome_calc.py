@@ -55,6 +55,7 @@ class DomeCalc:
         RIGHT= self.RIGHT
         diff1 = (target_az - current_az)%360
         if diff1 == 0:
+            logging.debug("Zero degrees, nothing to do")
             direction = RIGHT
             diff = 0
         if diff1 == 180:
