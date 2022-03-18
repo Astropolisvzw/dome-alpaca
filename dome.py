@@ -10,7 +10,7 @@ from datetime import datetime
 import cachetools.func
 from multiprocessing import Manager
 from threading import Thread
-from utils import RELAY_DOWN_IDX, RELAY_UP_IDX, RELAY_LEFT_IDX, RELAY_RIGHT_IDX
+from utils import Relay
 
 class Dome:
     connected = False
@@ -21,21 +21,23 @@ class Dome:
     mc_serial: ArduinoSerial = None
     dome_calc = DomeCalc()
     config_file: str = ''
-    # limits  = {RELAY_LEFT_IDX: -270, RELAY_RIGHT_IDX: 270}
-    limits  = {RELAY_LEFT_IDX: 180, RELAY_RIGHT_IDX: 180}
+    limits  = {Relay.LEFT_IDX: 180, Relay.RIGHT_IDX: 180} # should be static
 
     manager = Manager()
     ns = manager.Namespace()
     # 0 = Open, 1 = Closed, 2 = Opening, 3 = Closing, 4 = Shutter status error
     ns.shutter = 1
     ns.slewing = False
+    ns.domeslewing = False
     ns.aborted = False
-    ns.limitcounter = manager.dict({RELAY_LEFT_IDX: 0, RELAY_RIGHT_IDX: 0})
+    ns.target_az = 180 # set initial slewing target to SOUTH, should be overwritten and never used
+    ns.limitcounter = manager.dict({Relay.LEFT_IDX: 0, Relay.RIGHT_IDX: 0})
 
     def __init__(self, config_file='ap_ashdome_config.ini'):
         self.config_file = config_file
         park_pos, home_pos, spt, tpr, serial_port, serial_baud = self.load_settings()
         self.dome_calc.update_params(park_pos, home_pos, spt, tpr)
+        self.dome_calc.sync_on_position(home_pos, home_pos.az)
         self.serial_port = serial_port
         self.serial_baud = serial_baud
         self.set_serial_port(self.serial_port, self.serial_baud)
@@ -53,6 +55,9 @@ class Dome:
             self.mc_serial.close()
         self.serial_port = serial_port
         self.mc_serial = ArduinoSerial(self.serial_port, self.serial_baud)
+        self._save_settings()
+
+    def _save_settings(self):
         self.save_settings(self.dome_calc.park_pos, self.dome_calc.home_pos, self.dome_calc.steps_per_turn, self.dome_calc.turns_per_rotation, self.serial_port, self.serial_baud)
 
     def save_settings(self, park_pos, home_pos, spt, tpr, serial_port, serial_baud):
@@ -107,7 +112,7 @@ class Dome:
         self.ns.aborted = False
         self.ns.shutter = 3
         self.ns.slewing = True
-        slew_thread = Thread(target=self._shutter_action, args=(RELAY_DOWN_IDX, 10, 1))
+        slew_thread = Thread(target=self._shutter_action, args=(Relay.DOWN_IDX, 10, 1))
         slew_thread.start()
 
     def abort_slew(self):
@@ -118,7 +123,7 @@ class Dome:
         self.ns.aborted = False
         self.ns.shutter = 2
         self.ns.slewing = True
-        slew_thread = Thread(target=self._shutter_action, args=(RELAY_UP_IDX, 10, 0))
+        slew_thread = Thread(target=self._shutter_action, args=(Relay.UP_IDX, 10, 0))
         slew_thread.start()
 
     def _shutter_action(self, idx, seconds, after_shutter_state):
@@ -139,8 +144,7 @@ class Dome:
     def set_home_azimuth(self, home_az):
         self._update_azimuth()
         self.dome_calc.update_params(self.dome_calc.park_pos, self.curr_pos, self.steps_per_turn, self.turns_per_rotation)
-        self.save_settings(self.dome_calc.park_pos, self.curr_pos, self.steps_per_turn, self.turns_per_rotation, self.serial_port)
-
+        self._save_settings()
 
     def park(self):
         self.slew_to_az(self.dome_calc.park_pos.az)
@@ -152,7 +156,7 @@ class Dome:
     def set_park_azimuth(self):
         self._update_azimuth()
         self.dome_calc.update_params(self.curr_pos, self.dome_calc.home_pos, self.steps_per_turn, self.turns_per_rotation)
-        self.save_settings(self.curr_pos, self.dome_calc.home_pos, self.steps_per_turn, self.turns_per_rotation, self.serial_port)
+        self._save_settings()
 
     def get_azimuth(self):
         self._update_azimuth()
@@ -167,13 +171,14 @@ class Dome:
         steps, check1 = self.mc_serial.get_steps()
         turns, check2 = self.mc_serial.get_turns()
         if check1 and check2:
-            self.curr_pos = self.dome_calc.steps_turn_to_pos(steps, turns)
+            self.curr_pos = self.dome_calc.get_domepos(steps, turns)
             # self.step_turn_timestamp = datetime.now()
             logging.debug(f"Dome updating azimuth: {steps=}, {turns=}, {self.curr_pos=}")
         else:
             logging.debug(f"Error in checksum: {steps=}, {check1=}, {turns=}, {check2=}")
 
     def _check_azimuth(self, target_az):
+        """ Check that AZIMUTH is > 0 and < 360 """
         result = {}
         if (target_az < 0 or target_az > 360):
             result['OK'] = False
@@ -183,39 +188,45 @@ class Dome:
         return True, None
 
     def slew_to_az(self, target_az: float):
-        slew_thread = Thread(target=self._slew_to_az, args=(target_az,))
-        slew_thread.start()
-        logging.info("started thread")
+        """ Starts the thread that makes the dome slew to a target AZ """
+        self.ns.target_az = target_az
+        # slewing could be due to shutter, not dome !!!
+        if not self.ns.domeslewing:
+            slew_thread = Thread(target=self._slew_to_az)
+            slew_thread.start()
+            logging.info("started thread")
 
-    def _slew_to_az(self, target_az: float):
+    def _slew_to_az(self):
         self.ns.aborted = False
-        checkok, res = self._check_azimuth(target_az)
+        checkok, res = self._check_azimuth(self.ns.target_az)
         if not checkok:
             return res
         self.ns.slewing = True
-        ## call dome_calc to get direction and distance
-        RELAY_IDX, diff = self._slew_update(target_az)
-        logging.debug(f"Slewing to azimuth: {target_az=}, {self.curr_pos.az=}")
+        self.ns.domeslewing = True
+        ## get direction and distance
+        RELAY_IDX, diff = self._slew_update(self.ns.target_az)
+        logging.debug(f"Slewing to azimuth: {self.ns.target_az=}, {self.curr_pos.az=}")
         while(diff > 0.5 and not self.ns.aborted):
-            logging.info(f"Slewing, diff is {diff}, {RELAY_IDX=}, {target_az=}, {self.curr_pos.az=}")
+            logging.info(f"Slewing, diff is {diff}, {RELAY_IDX=}, {self.ns.target_az=}, {self.curr_pos.az=}")
             ## enable relay in correct direction
             ## loop until distance < 0.5 degree OR takes too long
             self.mc_serial.enable_relay(RELAY_IDX, 10)
             sleep(1)
             diffold = diff
-            _, diff = self._slew_update(target_az)
+            _, diff = self._slew_update(self.ns.target_az)
             diffdiff = abs(diff - diffold)
             # update the limitscounter with the changes between last run and this run
             self.ns.limitscounter[RELAY_IDX] = self.ns.limitscounter[RELAY_IDX] + diffdiff
-            logging.info(f"After slewing, diff is {diff}, {target_az=}, {self.curr_pos.az=} {RELAY_IDX=}")
-        logging.info(f"Slew solved, diff is {diff}")
+            logging.info(f"After slewing, diff is {diff}, {self.ns.target_az=}, {self.curr_pos.az=} {RELAY_IDX=}")
+        logging.info(f"Slew done, diff is {diff}")
         self.mc_serial.enable_relay(RELAY_IDX, 0) # stop dome slewing
         self.ns.slewing = False
+        self.ns.domeslewing = False
         return {'OK': True}
 
     def _slew_update(self, target_az: float):
         current_az = self.get_azimuth() # also updates
-        RELAY_IDX, diff = self.dome_calc.rotation_direction(current_az, target_az, self.limits, self.ns.limitcounter)
+        RELAY_IDX, diff = self.dome_calc.rotation_direction(current_az, target_az, self.LIMITS, self.ns.limitcounter)
         return RELAY_IDX, diff
 
     def synctoazimuth(self, target_az: float):
@@ -223,8 +234,9 @@ class Dome:
         checkok, res = self._check_azimuth(target_az)
         if not checkok:
             return res
-        # TODO: DO SOMETHING REAL
+        self._update_azimuth()
         self.ns.slewing = True
+        self.dome_calc.sync_on_position(self.curr_pos, target_az)
         # self.curr_az = target_az
         self.ns.slewing = False
         #print(f"synctoazimuth after: curr az = {self.curr_az}, target az = {target_az}")

@@ -1,4 +1,5 @@
 import threading
+from enum import Enum
 
 # synchronized methods taken from https://www.theorangeduck.com/page/synchronized-python
 
@@ -27,7 +28,9 @@ def synchronized_method(method):
 
     return sync_method
 
-RELAY_UP_IDX= 0
-RELAY_DOWN_IDX=1
-RELAY_LEFT_IDX=2
-RELAY_RIGHT_IDX=3
+
+class Relay(Enum):
+    UP_IDX= 0
+    DOWN_IDX=1
+    LEFT_IDX=2
+    RIGHT_IDX=3
