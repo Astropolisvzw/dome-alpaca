@@ -70,6 +70,8 @@ class Dome:
         config.set(section, 'home_az', str(home_pos.az))
         config.set(section, 'home_steps', str(home_pos.steps))
         config.set(section, 'home_turns', str(home_pos.turns))
+        config.set(section, 'open_shutter', str(self.open_shutter_seconds))
+        config.set(section, 'close_shutter', str(self.close_shutter_seconds))
         config.set(section, 'steps_per_turn', str(spt))
         config.set(section, 'turns_per_rotation', str(tpr))
         config.set(section, 'serial_port', serial_port)
@@ -91,6 +93,8 @@ class Dome:
         home_az = config.getint(section, 'home_az')
         home_steps = config.getint(section, 'home_steps')
         home_turns = config.getint(section, 'home_turns')
+        self.open_shutter_seconds = config.getint(section, 'open_shutter')
+        self.close_shutter_seconds = config.getint(section, 'close_shutter')
         spt = config.getint(section, 'steps_per_turn')
         tpr = config.getfloat(section, 'turns_per_rotation')
         serial_port = config.get(section, 'serial_port')
@@ -112,7 +116,7 @@ class Dome:
         self.ns.aborted = False
         self.ns.shutter = 3
         self.ns.slewing = True
-        slew_thread = Thread(target=self._shutter_action, args=(Relay.DOWN_IDX, 10, 1))
+        slew_thread = Thread(target=self._shutter_action, args=(Relay.DOWN_IDX, self.close_shutter_seconds, 1))
         slew_thread.start()
 
     def abort_slew(self):
@@ -123,7 +127,7 @@ class Dome:
         self.ns.aborted = False
         self.ns.shutter = 2
         self.ns.slewing = True
-        slew_thread = Thread(target=self._shutter_action, args=(Relay.UP_IDX, 10, 0))
+        slew_thread = Thread(target=self._shutter_action, args=(Relay.UP_IDX, self.close_shutter_seconds, 0))
         slew_thread.start()
 
     def _shutter_action(self, idx, seconds, after_shutter_state):
