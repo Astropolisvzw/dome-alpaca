@@ -32,6 +32,7 @@ class TestDomeCalc(unittest.TestCase):
         assert calc.north_pos.is_complete()
         assert calc.north_pos.az == 0
         assert calc.home_pos.is_complete()
+        print(f"{calc}")
         assert calc.home_pos.az == 180
         assert calc.park_pos.is_complete()
 
@@ -66,25 +67,34 @@ class TestDomeCalc(unittest.TestCase):
         home = DomePos(steps=100, turns=90)
         calc.update_params(park, home, steps_per_turn=1000, turns_per_rotation=36)
         calc.sync_on_position(home, 180)
-        LIMITS  = {RELAY_LEFT_IDX: 90, RELAY_RIGHT_IDX: 90}
+        LIMITS  = {Relay.LEFT_IDX: 180, Relay.RIGHT_IDX: 180}
+        limitcounter = 0
 
-        dir, diff = calc.corrected_rotation_direction(90, 100)
+        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 10, LIMITS, limitcounter)
+        assert LIMITS[Relay.LEFT_IDX] == LIMITS[Relay.RIGHT_IDX] == 180
+        print(f"limitcounter: {limitcounter}")
+        assert limitcounter == 10
         assert dir == Relay.RIGHT_IDX and diff == 10
 
-        dir, diff = calc.uncorrected_rotation_direction(90, 350)
-        assert dir == Relay.LEFT_IDX and diff == 100
+        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 200, LIMITS, limitcounter)
+        print(f"limitcounter: {limitcounter}")
+        assert limitcounter == -150
+        assert dir == Relay.LEFT_IDX and diff == 160
 
-        dir, diff = calc.uncorrected_rotation_direction(350, 10)
-        assert dir == Relay.RIGHT_IDX and diff == 20
+        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.LEFT_IDX, 30, LIMITS, limitcounter)
+        print(f"{limitcounter=}, {dir=}, {diff=}")
+        assert limitcounter == -180
+        assert dir == Relay.LEFT_IDX and diff == 30
 
-        dir, diff = calc.uncorrected_rotation_direction(359, 0)
-        assert dir == Relay.RIGHT_IDX and diff == 1
+        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.LEFT_IDX, 1, LIMITS, limitcounter)
+        print(f"{limitcounter=}, {dir=}, {diff=}")
+        assert limitcounter == 179
+        assert dir == Relay.RIGHT_IDX and diff == 359
 
-        dir, diff = calc.uncorrected_rotation_direction(0, 180)
-        assert dir == Relay.LEFT_IDX and diff == 180
-
-        dir, diff = calc.uncorrected_rotation_direction(10, 359)
-        assert dir == Relay.LEFT_IDX and diff == 11
+        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 2, LIMITS, limitcounter)
+        print(f"{limitcounter=}, {dir=}, {diff=}")
+        assert limitcounter == -179
+        assert dir == Relay.LEFT_IDX and diff == 358
 
 if __name__ == '__main__':
     logger = logging.getLogger()

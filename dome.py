@@ -31,7 +31,7 @@ class Dome:
     ns.domeslewing = False
     ns.aborted = False
     ns.target_az = 180 # set initial slewing target to SOUTH, should be overwritten and never used
-    ns.limitcounter = manager.dict({Relay.LEFT_IDX: 0, Relay.RIGHT_IDX: 0})
+    ns.limitcounter = 0 # no cable is used either left or right at the start of operation. Dome should be in HOME position
 
     def __init__(self, config_file='ap_ashdome_config.ini'):
         self.config_file = config_file
@@ -230,7 +230,7 @@ class Dome:
 
     def _slew_update(self, target_az: float):
         current_az = self.get_azimuth() # also updates
-        RELAY_IDX, diff = self.dome_calc.rotation_direction(current_az, target_az, self.LIMITS, self.ns.limitcounter)
+        RELAY_IDX, diff, self.ns.limitcounter = self.dome_calc.rotation_direction(current_az, target_az, self.LIMITS, self.ns.limitcounter)
         return RELAY_IDX, diff
 
     def synctoazimuth(self, target_az: float):

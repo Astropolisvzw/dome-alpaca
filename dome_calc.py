@@ -34,9 +34,9 @@ class DomeCalc:
     """ Holds the current dome calculation parameters (read from disk).
         Provides methods to calculate the rotational position, azimuth and direction in which to slew.
     """
-    park_pos: DomePos = None
-    home_pos: DomePos = None
-    north_pos: DomePos = None
+    park_pos: DomePos
+    home_pos: DomePos
+    north_pos: DomePos
     steps_per_turn = 0
     turns_per_rotation = 0
     degree_per_turn = 0
@@ -61,7 +61,6 @@ class DomeCalc:
         self.home_pos = home_pos
         self.north_pos = DomePos()
 
-
     # given that sync_pos has azimuth sync_az, calculate our NORTH position
     def sync_on_position(self, sync_pos: DomePos, sync_az: float):
         # correcting the incoming sync position. The AZ will be rubbish, but at least the rotpos will be correct
@@ -70,7 +69,7 @@ class DomeCalc:
         self.north_pos.rotpos = sync_pos.rotpos - (sync_az/self.degree_per_turn)
         self.north_pos.az = 0
         self.north_pos.turns = int(self.north_pos.rotpos)
-        self.north_pos.steps = (self.north_pos.rotpos - self.north_pos.turns) * self.steps_per_turn
+        self.north_pos.steps = int((self.north_pos.rotpos - self.north_pos.turns) * self.steps_per_turn)
         self.complete_domepos(self.home_pos)
         self.complete_domepos(self.park_pos)
 
@@ -84,7 +83,7 @@ class DomeCalc:
 
     def complete_domepos(self, domepos: DomePos):
         """ takes a DomePos and fills in (in-place) the rotpos and az """
-        domeposrrotpos=self.get_rotpos(domepos.steps, domepos.turns)
+        domepos.rotpos=self.get_rotpos(domepos.steps, domepos.turns)
         domepos.az = self.get_az(domepos.rotpos)
 
 
@@ -125,21 +124,30 @@ class DomeCalc:
 
     def corrected_rotation_direction(self, direction, diff, limits, limitscounter):
         """ corrects dome rotation according to the current cable limits """
-        LEFT = 0
-        RIGHT= 1
-        total_direction = limitscounter[direction] + diff
-        if direction == Relay.LEFT_IDX:
-            logging.info(f"{total_direction=}, {limitscounter=}")
-            if total_direction-limitscounter[Relay.RIGHT_IDX] > limits[LEFT]:
-                logging.info("cable length violation")
-                direction = Relay.RIGHT_IDX
-                diff = 360 - diff
-        else:
-            logging.info(f"{limitscounter=}, {total_direction=}")
-            if limitscounter[Relay.RIGHT_IDX]-total_direction > limits[RIGHT]:
-                logging.info("cable length violation")
-                direction = Relay.LEFT_IDX
-                diff = 360 - diff
+        dir_sign = self._direction_sign(direction) # either 1 or -1
+        if abs(limitscounter + dir_sign*diff) > limits[direction]:
+            direction = self._direction_invert(direction)
+            diff = 360 - diff
+            dir_sign = dir_sign * -1 # invert sign
+        limitscounter = limitscounter + dir_sign*diff
+        logging.info(f"corrected_rotation_direction result: {direction=}, {diff=}, {limitscounter=}")
+        return direction, diff, limitscounter
 
-        logging.info(f"result: {'LEFT' if direction==LEFT else 'RIGHT'}, {diff=}, {str(limitscounter)=}")
-        return direction, diff
+    def _direction_sign(self, direction:Relay):
+        """ Given a relay direction, return the other direction """
+        if direction == Relay.LEFT_IDX:
+            return -1
+        return 1
+
+    def _direction_invert(self, direction:Relay):
+        """ Given a relay direction, return the other direction """
+        if direction == Relay.LEFT_IDX:
+            return Relay.RIGHT_IDX
+        return Relay.LEFT_IDX
+
+
+
+
+    def __repr__(self):
+        return f"DomeCalc Class:\n{self.park_pos=}\n{self.north_pos=}\n{self.home_pos=}\n{self.steps_per_turn=}\n \
+            {self.turns_per_rotation=}\n{self.degree_per_turn=}\n{self.degree_per_step=}\n{self.turn_per_degree=}\n"
