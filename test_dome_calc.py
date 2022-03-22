@@ -3,7 +3,7 @@ from dome_calc import DomeCalc
 from dome_calc import DomePos
 import logging
 from utils import Relay
-
+from decimal import *
 class TestDomeCalc(unittest.TestCase):
     def setUp(self):
         self.test = "test"
@@ -95,6 +95,21 @@ class TestDomeCalc(unittest.TestCase):
         print(f"{limitcounter=}, {dir=}, {diff=}")
         assert limitcounter == -179
         assert dir == Relay.LEFT_IDX and diff == 358
+
+    def test_get_az(self):
+        calc = DomeCalc()
+        park = DomePos(steps=10, turns=9)
+        home = DomePos(steps=100, turns=90)
+        calc.update_params(park, home, steps_per_turn=1000, turns_per_rotation=36)
+        calc.sync_on_position(home, 180)
+        assert calc.get_az(home.rotpos) == 180
+        assert calc.get_az(calc.north_pos.rotpos) == 0
+        print(calc.get_az(home.rotpos+181*calc.turn_per_degree))
+
+        assert calc.get_az(Decimal(home.rotpos)+Decimal(181)*Decimal(calc.turn_per_degree)) == 1
+
+
+
 
 if __name__ == '__main__':
     logger = logging.getLogger()

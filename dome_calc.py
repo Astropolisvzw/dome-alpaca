@@ -2,7 +2,8 @@ import logging
 from dataclasses import dataclass
 from utils import Relay
 from typing import Tuple
-
+import decimal
+from decimal import Decimal
 
 @dataclass
 class DomePos:
@@ -37,24 +38,29 @@ class DomeCalc:
     park_pos: DomePos
     home_pos: DomePos
     north_pos: DomePos
-    steps_per_turn = 0
-    turns_per_rotation = 0
-    degree_per_turn = 0
-    degree_per_step = 0
-    turn_per_degree = 0
+    steps_per_turn: Decimal = 0
+    turns_per_rotation: Decimal = 0
+    degree_per_turn: Decimal = 0
+    degree_per_step: Decimal = 0
+    turn_per_degree: Decimal = 0
     LEFT = Relay.LEFT_IDX
     RIGHT = Relay.RIGHT_IDX
 
     def __init__(self):
+        # init python Decimals so we can calculate more precisely
+        c = decimal.getcontext()
+        c.traps[decimal.FloatOperation] = True
+        c.prec = 7
         return
 
     def update_params(self, park_pos: DomePos, home_pos: DomePos, steps_per_turn, turns_per_rotation):
+        """ Call this method before first use of the class. Initialises all parameters necessory for dome calculations """
         # params
-        self.steps_per_turn = steps_per_turn
-        self.turns_per_rotation = turns_per_rotation
-        self.degree_per_turn = 360/turns_per_rotation
-        self.degree_per_step = self.degree_per_turn/steps_per_turn
-        self.turn_per_degree = turns_per_rotation/360
+        self.steps_per_turn = Decimal(steps_per_turn)
+        self.turns_per_rotation = Decimal(turns_per_rotation)
+        self.degree_per_turn = Decimal(360)/self.turns_per_rotation
+        self.degree_per_step = self.degree_per_turn/self.steps_per_turn
+        self.turn_per_degree = self.turns_per_rotation/Decimal(360)
 
         # positions (possibly incomplete, no az/rotpos until after sync_on_position call)
         self.park_pos = park_pos
@@ -63,6 +69,7 @@ class DomeCalc:
 
     # given that sync_pos has azimuth sync_az, calculate our NORTH position
     def sync_on_position(self, sync_pos: DomePos, sync_az: float):
+        """ assume the current encoder position (sync_pos) is at sync_az, then calculate the North position """
         # correcting the incoming sync position. The AZ will be rubbish, but at least the rotpos will be correct
         self.complete_domepos(sync_pos)
         # logging.info(f"{sync_pos.rotpos=} - ({sync_az=}/{self.degree_per_turn=})")
@@ -86,7 +93,6 @@ class DomeCalc:
         domepos.rotpos=self.get_rotpos(domepos.steps, domepos.turns)
         domepos.az = self.get_az(domepos.rotpos)
 
-
     def get_rotpos(self, steps, turns):
         """ takes steps and turns and calculates the rotpos """
         logging.debug(f"get_rotpos({steps/self.steps_per_turn=}, {turns=})")
@@ -94,7 +100,7 @@ class DomeCalc:
 
     def get_az(self, rotpos) -> int:
         """ calculates the azimuth given a rotpos """
-        return ((rotpos - self.north_pos.rotpos)*self.degree_per_turn) % 360
+        return ((Decimal(rotpos) - Decimal(self.north_pos.rotpos))*Decimal(self.degree_per_turn)) % Decimal(360)
 
 
     def rotation_direction(self, current_az, target_az, limits, limitscounter):
