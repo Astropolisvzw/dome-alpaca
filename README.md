@@ -1,6 +1,11 @@
 # dome-alpaca
 Ascom Alpaca driver for custom dome hardware
 
+## Install systemd
+
+copy dome.service to /etc/systemd/system/dome.service
+
+
 
 
 ## Code structure

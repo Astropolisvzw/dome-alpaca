@@ -1,11 +1,15 @@
 [Unit]
 Description=Astropolis Ash Dome - ASCOM Alpaca driver service
 After=network.target
+StartLimitIntervalSec=500
+StartLimitBurst=5
 
 [Service]
+Restart=on-failure
+RestartSec=5s
 User=pi
 WorkingDirectory=/home/pi
-ExecStart=/home/pi/dev/dome-alpaca/start.sh
+ExecStart=/home/pi/dev/dome-alpaca/systemdstart.sh
 
 [Install]
 WantedBy=multi-user.target

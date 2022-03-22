@@ -21,7 +21,7 @@ class Dome:
     mc_serial: ArduinoSerial = None
     dome_calc = DomeCalc()
     config_file: str = ''
-    limits  = {Relay.LEFT_IDX: 180, Relay.RIGHT_IDX: 180} # should be static
+    LIMITS  = {Relay.LEFT_IDX: 180, Relay.RIGHT_IDX: 180} # should be static
 
     manager = Manager()
     ns = manager.Namespace()
@@ -87,10 +87,10 @@ class Dome:
         config = ConfigParser()
         section = 'domeparams'
         config.read(self.config_file)
-        park_az = config.getint(section, 'park_az')
+        park_az = config.getfloat(section, 'park_az')
         park_steps = config.getint(section, 'park_steps')
         park_turns = config.getint(section, 'park_turns')
-        home_az = config.getint(section, 'home_az')
+        home_az = config.getfloat(section, 'home_az')
         home_steps = config.getint(section, 'home_steps')
         home_turns = config.getint(section, 'home_turns')
         self.open_shutter_seconds = config.getint(section, 'open_shutter')
@@ -169,14 +169,10 @@ class Dome:
     @synchronized_method
     @cachetools.func.ttl_cache(maxsize=1, ttl=0.1)
     def _update_azimuth(self):
-        # current_timestamp = datetime.now()
-        # if current_timestamp - self.step_turn_timestamp < 1:
-            # return
         steps, check1 = self.mc_serial.get_steps()
         turns, check2 = self.mc_serial.get_turns()
         if check1 and check2:
             self.curr_pos = self.dome_calc.get_domepos(steps, turns)
-            # self.step_turn_timestamp = datetime.now()
             logging.debug(f"Dome updating azimuth: {steps=}, {turns=}, {self.curr_pos=}")
         else:
             logging.debug(f"Error in checksum: {steps=}, {check1=}, {turns=}, {check2=}")

@@ -4,7 +4,7 @@ import serial
 import encoder_checksum as ec
 import logging
 import struct
-from utils import synchronized_method
+from utils import synchronized_method, Relay
 
 class ArduinoSerial:
     serial_port = None
@@ -44,16 +44,16 @@ class ArduinoSerial:
         logging.info(f"Arduino turns:{result}, {check=}")
         return result, check
 
-    def enable_relay(self, relayNr, seconds):
-        results = self._generic_send_command_get_result([self.characterN, relayNr, seconds], 1)
+    def enable_relay(self, relayNr: Relay, seconds):
+        results = self._generic_send_command_get_result([self.characterN, relayNr.value, seconds], 1)
         if len(results) != 1 and results[0] != seconds:
             logging.error("Did not receive expected result, {results=}")
 
-    def disable_relay(self, relayNr):
+    def disable_relay(self, relayNr: Relay):
         self.enable_relay(relayNr, 0)
 
     def disable_all_relays(self):
-        for relay in range(0,4):
+        for relay in Relay:
             self.disable_relay(relay)
 
     def _process_results(self, lowbyte, highbyte):
