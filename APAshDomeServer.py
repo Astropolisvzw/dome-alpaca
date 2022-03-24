@@ -763,6 +763,7 @@ def dome_slew_to_azimuth_put(device_number, azimuth=None, client_id=None, client
     """
     # try:
     ret = dome.slew_to_az(_float(request.forms.Azimuth))
+    ret = std_res(request) if ret is None else ret
     response.status = 200
     logging.info(f"returning from slew {ret}")
     return ret
