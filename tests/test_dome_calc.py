@@ -36,6 +36,16 @@ class TestDomeCalc(unittest.TestCase):
         assert calc.home_pos.az == 180
         assert calc.park_pos.is_complete()
 
+    def test_dome_calc_domepos(self):
+        calc = DomeCalc()
+        park = DomePos(steps=10, turns=9)
+        home = DomePos(steps=100, turns=90)
+        calc.update_params(park, home, steps_per_turn=1000, turns_per_rotation=36)
+        calc.sync_on_position(home, 180)
+        # test calculations with domepos
+        assert calc.get_domepos_az(140).az == 140
+        assert calc.get_steps_turns(calc.get_rotpos(100, 5)) == (100, 5)
+
     def test_uncorrected_rotation_direction(self):
         calc = DomeCalc()
         park = DomePos(steps=10, turns=9)
@@ -104,9 +114,12 @@ class TestDomeCalc(unittest.TestCase):
         calc.sync_on_position(home, 180)
         assert calc.get_az(home.rotpos) == 180
         assert calc.get_az(calc.north_pos.rotpos) == 0
-        print(calc.get_az(home.rotpos+181*calc.turn_per_degree))
+        print(calc.get_az(Decimal(home.rotpos)+181*calc.turn_per_degree))
 
         assert calc.get_az(Decimal(home.rotpos)+Decimal(181)*Decimal(calc.turn_per_degree)) == 1
+        # negative azimuths should be converted to 0-360
+        print("result is",calc.get_az(Decimal(calc.north_pos.rotpos)-(Decimal(5)*Decimal(calc.turn_per_degree))))
+        assert calc.get_az(Decimal(calc.north_pos.rotpos)-(Decimal(5)*Decimal(calc.turn_per_degree))) == 355
 
 
 

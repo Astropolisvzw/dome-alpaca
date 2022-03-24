@@ -22,6 +22,7 @@ class Dome:
     dome_calc = DomeCalc()
     config_file: str = ''
     LIMITS  = {Relay.LEFT_IDX: 180, Relay.RIGHT_IDX: 180} # should be static
+    conformance = False
 
     manager = Manager()
     ns = manager.Namespace()
@@ -33,7 +34,7 @@ class Dome:
     ns.target_az = 180 # set initial slewing target to SOUTH, should be overwritten and never used
     ns.limitcounter = 0 # no cable is used either left or right at the start of operation. Dome should be in HOME position
 
-    def __init__(self, config_file='ap_ashdome_config.ini'):
+    def __init__(self, config_file='ap_ashdome_config.ini', conformance=False):
         self.config_file = config_file
         park_pos, home_pos, spt, tpr, serial_port, serial_baud = self.load_settings()
         self.dome_calc.update_params(park_pos, home_pos, spt, tpr)
@@ -45,6 +46,7 @@ class Dome:
         self.home_pos = home_pos
         self.steps_per_turn = spt
         self.turns_per_rotation = tpr
+        self.conformance = conformance
         logging.info(f"Inited dome with park: {self.dome_calc.park_pos}, home: {self.dome_calc.home_pos}, spt: {spt}, tpr: {tpr}, serial port: {serial_port}")
 
     def get_slewing(self):
@@ -163,7 +165,11 @@ class Dome:
         self._save_settings()
 
     def get_azimuth(self):
-        self._update_azimuth()
+        if self.conformance:
+            logging.warning("returning conformance (faked) azimuth")
+            self.curr_pos = self.dome_calc.get_domepos_az(self.ns.target_az)
+        else:
+            self._update_azimuth()
         return self.curr_pos.az
 
     @synchronized_method
@@ -189,6 +195,9 @@ class Dome:
 
     def slew_to_az(self, target_az: float):
         """ Starts the thread that makes the dome slew to a target AZ """
+        checkok, res = self._check_azimuth(target_az)
+        if not checkok:
+            return res
         self.ns.target_az = target_az
         # slewing could be due to shutter, not dome !!!
         if not self.ns.domeslewing:
@@ -198,9 +207,6 @@ class Dome:
 
     def _slew_to_az(self):
         self.ns.aborted = False
-        checkok, res = self._check_azimuth(self.ns.target_az)
-        if not checkok:
-            return res
         self.ns.slewing = True
         self.ns.domeslewing = True
         ## get direction and distance
@@ -215,9 +221,7 @@ class Dome:
             diffold = diff
             _, diff = self._slew_update(self.ns.target_az)
             diffdiff = abs(diff - diffold)
-            # update the limitscounter with the changes between last run and this run
-            self.ns.limitscounter[RELAY_IDX] = self.ns.limitscounter[RELAY_IDX] + diffdiff
-            logging.info(f"After slewing, diff is {diff}, {self.ns.target_az=}, {self.curr_pos.az=} {RELAY_IDX=}")
+            logging.info(f"After slewing, diff is {diff}, {self.ns.target_az=}, {self.curr_pos.az=} {RELAY_IDX=}, {self.ns.limitcounter=}")
         logging.info(f"Slew done, diff is {diff}")
         self.mc_serial.enable_relay(RELAY_IDX, 0) # stop dome slewing
         self.ns.slewing = False

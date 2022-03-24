@@ -49,7 +49,7 @@ class DomeCalc:
     def __init__(self):
         # init python Decimals so we can calculate more precisely
         c = decimal.getcontext()
-        c.traps[decimal.FloatOperation] = True
+        # c.traps[decimal.FloatOperation] = True
         c.prec = 7
         return
 
@@ -73,10 +73,10 @@ class DomeCalc:
         # correcting the incoming sync position. The AZ will be rubbish, but at least the rotpos will be correct
         self.complete_domepos(sync_pos)
         # logging.info(f"{sync_pos.rotpos=} - ({sync_az=}/{self.degree_per_turn=})")
-        self.north_pos.rotpos = sync_pos.rotpos - (sync_az/self.degree_per_turn)
+        self.north_pos.rotpos = float(Decimal(sync_pos.rotpos) - (Decimal(sync_az)/self.degree_per_turn))
         self.north_pos.az = 0
         self.north_pos.turns = int(self.north_pos.rotpos)
-        self.north_pos.steps = int((self.north_pos.rotpos - self.north_pos.turns) * self.steps_per_turn)
+        self.north_pos.steps = int(Decimal(self.north_pos.rotpos - self.north_pos.turns) * self.steps_per_turn)
         self.complete_domepos(self.home_pos)
         self.complete_domepos(self.park_pos)
 
@@ -85,7 +85,16 @@ class DomeCalc:
         rotpos=self.get_rotpos(steps, turns)
         az = self.get_az(rotpos)
         result = DomePos(steps=steps, turns=turns, az=az, rotpos=rotpos)
-        logging.info(f"Encoder position to dome position: {result.az} deg ({steps=}, {turns=}, {rotpos=})")
+        logging.info(f"Creating domepos for steps and turns: {result.az} deg ({steps=}, {turns=}, {rotpos=})")
+        return result
+
+    # get a domepos with a given az
+    def get_domepos_az(self, az):
+        rotpos=Decimal(az) / self.degree_per_turn + Decimal(self.north_pos.rotpos)
+        az = az
+        steps, turns = self.get_steps_turns(rotpos)
+        result = DomePos(steps=steps, turns=turns, az=az, rotpos=rotpos)
+        logging.info(f"Creating domepos for az: {result.az} deg ({steps=}, {turns=}, {rotpos=})")
         return result
 
     def complete_domepos(self, domepos: DomePos):
@@ -95,12 +104,18 @@ class DomeCalc:
 
     def get_rotpos(self, steps, turns):
         """ takes steps and turns and calculates the rotpos """
-        logging.debug(f"get_rotpos({steps/self.steps_per_turn=}, {turns=})")
-        return steps/self.steps_per_turn + turns
+        logging.debug(f"get_rotpos({Decimal(steps)/self.steps_per_turn=}, {turns=})")
+        return float(steps/self.steps_per_turn + turns)
+
+    def get_steps_turns(self, rotpos):
+        """ takes steps and turns and calculates the rotpos """
+        return float(Decimal(rotpos - int(rotpos))*self.steps_per_turn), int(rotpos)
 
     def get_az(self, rotpos) -> int:
         """ calculates the azimuth given a rotpos """
-        return ((Decimal(rotpos) - Decimal(self.north_pos.rotpos))*Decimal(self.degree_per_turn)) % Decimal(360)
+        result = float(((Decimal(rotpos) - Decimal(self.north_pos.rotpos))*Decimal(self.degree_per_turn)) % Decimal(360))
+        # % doesn't work with decimals (returns negative degrees) so we convert before returning
+        return float(result) % 360
 
 
     def rotation_direction(self, current_az, target_az, limits, limitscounter):

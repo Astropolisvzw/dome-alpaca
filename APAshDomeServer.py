@@ -1,4 +1,4 @@
-from bottle import route, get, put, post, request, response,run, template
+from bottle import route, get, put, post, request, response, run, template
 import bottle
 from dome import Dome
 from fake_dome import FakeDome
@@ -588,8 +588,9 @@ def dome_find_home_put(device_number):  # noqa: E501
     dome.find_home()
     ret = std_res(request)
     response.status = 200
+    ret['ErrorNumber'] = 1024
+    ret['ErrorMessage'] = "Finding home not supported"
     return ret
-
 
 @put(get_url('openshutter'))
 def dome_open_shutter_put(device_number):  # noqa: E501
@@ -760,9 +761,8 @@ def dome_slew_to_azimuth_put(device_number, azimuth=None, client_id=None, client
 
     :rtype: MethodResponse
     """
-    ret = std_res(request)
     # try:
-    dome.slew_to_az(_float(request.forms.Azimuth))
+    ret = dome.slew_to_az(_float(request.forms.Azimuth))
     response.status = 200
     logging.info(f"returning from slew {ret}")
     return ret
@@ -830,6 +830,9 @@ if __name__ == "__main__":
     parser.add_argument(
         "-t", "--test", help="Use a fake dome encoder", action="store_true"
     )
+    parser.add_argument(
+        "-c", "--conformance", help="Small changes to help ASCOM conformance testing", action="store_true"
+    )
     args = parser.parse_args()
     if args.verbose:
         logger.setLevel(logging.INFO)
@@ -841,7 +844,7 @@ if __name__ == "__main__":
     if args.test:
         dome = FakeDome()
     else:
-        dome = Dome()
+        dome = Dome(conformance=args.conformance)
     if args.logfile:
         filehandler = f"{datadir}vastlog-{datenow:%Y%M%d-%H_%M_%S}.log"
         fh = logging.FileHandler(filehandler)
