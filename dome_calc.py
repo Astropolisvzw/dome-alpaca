@@ -79,6 +79,7 @@ class DomeCalc:
         self.north_pos.steps = int(Decimal(self.north_pos.rotpos - self.north_pos.turns) * self.steps_per_turn)
         self.complete_domepos(self.home_pos)
         self.complete_domepos(self.park_pos)
+        self.curr_pos = sync_pos
 
     # creates an is_complete domepos using only steps and turns (+ a fully inited calc class)
     def get_domepos(self, steps, turns):
