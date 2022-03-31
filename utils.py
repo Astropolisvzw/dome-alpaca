@@ -1,5 +1,12 @@
 import threading
 from enum import Enum
+import math
+
+class Relay(Enum):
+    UP_IDX= 0
+    DOWN_IDX=1
+    LEFT_IDX=2
+    RIGHT_IDX=3
 
 # synchronized methods taken from https://www.theorangeduck.com/page/synchronized-python
 
@@ -28,14 +35,37 @@ def synchronized_method(method):
 
     return sync_method
 
-def smallest_diff(angle1, angle2):
-    """ smallest diff between 2 angles, including sign (minus is LEFT rotate) """
-    diff1 = (angle1 - angle2)%360
-    diff2 = (angle2 - angle1)%360
-    return min(diff1, diff2)
+def best_rotation(origin, target):
+    """ Given an origin angle and target angle (0-360 degrees), return the smallest rotation and direction to go from origin to target """
+    MAX_VALUE=360.0
+    signedDiff = 0.0;
+    raw_diff = origin - target if origin > target else target - origin
+    mod_diff = math.fmod(raw_diff, MAX_VALUE);
 
-class Relay(Enum):
-    UP_IDX= 0
-    DOWN_IDX=1
-    LEFT_IDX=2
-    RIGHT_IDX=3
+    if(mod_diff > (MAX_VALUE/2) ):
+        # There is a shorter path in opposite direction
+        signedDiff = (MAX_VALUE - mod_diff)
+        if(target>origin): signedDiff = signedDiff * -1;
+    else:
+        signedDiff = mod_diff;
+        if(origin>target): signedDiff = signedDiff * -1;
+
+    return signedDiff;
+
+def rotation_to_direction(rotation):
+    if rotation < 0:
+        return Relay.LEFT_IDX
+    return Relay.RIGHT_IDX    
+
+def direction_sign(self, direction:Relay):
+    """ Given a relay direction, return the other direction """
+    if direction == Relay.LEFT_IDX:
+        return -1
+    return 1
+
+def direction_invert(self, direction:Relay):
+    """ Given a relay direction, return the other direction """
+    if direction == Relay.LEFT_IDX:
+        return Relay.RIGHT_IDX
+    return Relay.LEFT_IDX
+

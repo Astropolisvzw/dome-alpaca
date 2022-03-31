@@ -12,7 +12,8 @@ class TestDomeCalc(unittest.TestCase):
     def test_dome_calc(self):
         dome = Dome()
         res = dome.slew_to_az(-10)
-        print(res)
+        assert res is not None
+        assert dome.slew_to_az(10) == None
 
 
 if __name__ == '__main__':

@@ -1,9 +1,11 @@
 import logging
 from dataclasses import dataclass
+import utils
 from utils import Relay
 from typing import Tuple
 import decimal
 from decimal import Decimal
+
 
 @dataclass
 class DomePos:
@@ -122,39 +124,28 @@ class DomeCalc:
 
     def rotation_direction(self, current_az, target_az, limits, limitscounter):
         """ determine rotation direction and the remaining difference in azimuth """
-        direction, diff = self.uncorrected_rotation_direction(current_az, target_az)
-        return self.corrected_rotation_direction(direction, diff, limits, limitscounter)
+        rotation = self.uncorrected_rotation_direction(current_az, target_az)
+        return self.corrected_rotation_direction(rotation, limits, limitscounter)
+
 
     def uncorrected_rotation_direction(self, current_az, target_az):
         """ calculates which direction the dome should turn """
-        diff1 = (target_az - current_az)%360
-        if diff1 == 0:
-            direction = Relay.RIGHT_IDX
-            diff = 0
-        if diff1 == 180:
-            direction = Relay.LEFT_IDX
-            diff = diff1
-        if current_az + 180 > target_az:
-            # Rotate current directly towards target.
-            direction = Relay.RIGHT_IDX
-            diff = diff1
-        else:
-            # Rotate the other direction towards target.
-            direction = Relay.LEFT_IDX
-            diff = current_az + 360 - target_az
-        logging.info(f"Orig result: {direction}, {diff1=}, {diff=}")
+        rotation = utils.best_rotation(current_az, target_az)
+        logging.info(f"uncorrected_rotation_direction result: {rotation}")
+        return rotation 
+
+
+    def corrected_rotation_direction(self, rotation, limits, limitscounter):
+        """ corrects dome rotation according to the current cable limits """
+        direction = utils.rotation_to_direction(rotation)
+        limit = limits[direction]
+        diff = abs(rotation)
+        if abs(limitscounter + rotation) > limit:
+            direction = utils.direction_invert(direction)
+            diff = 360 + rotation
+        logging.info(f"corrected_rotation_direction result: {rotation=}, {diff=}, {limitscounter=}")
         return direction, diff
 
-    def corrected_rotation_direction(self, direction, diff, limits, limitscounter):
-        """ corrects dome rotation according to the current cable limits """
-        dir_sign = self.direction_sign(direction) # either 1 or -1
-        if abs(limitscounter + dir_sign*diff) > limits[direction]:
-            direction = self._direction_invert(direction)
-            diff = 360 - diff
-            dir_sign = dir_sign * -1 # invert sign
-        # limitscounter = limitscounter + dir_sign*diff
-        logging.info(f"corrected_rotation_direction result: {direction=}, {diff=}, {limitscounter=}")
-        return direction, diff
 
     def direction_sign(self, direction:Relay):
         """ Given a relay direction, return the other direction """
@@ -162,11 +153,13 @@ class DomeCalc:
             return -1
         return 1
 
+
     def _direction_invert(self, direction:Relay):
         """ Given a relay direction, return the other direction """
         if direction == Relay.LEFT_IDX:
             return Relay.RIGHT_IDX
         return Relay.LEFT_IDX
+
 
     def __repr__(self):
         return f"DomeCalc Class:\n{self.park_pos=}\n{self.north_pos=}\n{self.home_pos=}\n{self.steps_per_turn=}\n \
