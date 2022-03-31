@@ -229,20 +229,25 @@ class Dome:
         return {'OK': True}
 
     def _slew_update(self, target_az: float):
+        old_pos = self.curr_pos
         current_az = self.get_azimuth() # also updates
-        RELAY_IDX, diff, self.ns.limitcounter = self.dome_calc.rotation_direction(current_az, target_az, self.LIMITS, self.ns.limitcounter)
-        return RELAY_IDX, diff
+        direction, diff = self.dome_calc.rotation_direction(current_az, target_az, self.LIMITS, self.ns.limitcounter)
+        dir_sign = self.dome_calc.direction_sign(direction) # either 1 or -1
+        limitchange = dir_sign*abs(old_pos.az - current_az) if old_pos is not None else 0
+        logging.info(f"Changing limitcounter with {limitchange} to {self.ns.limitcounter + limitchange}, {direction=}, {dir_sign=}, {old_pos.az=}, {current_az=}")
+        self.ns.limitcounter = self.ns.limitcounter + limitchange
+        return direction, diff
 
     def synctoazimuth(self, target_az: float):
-        #print(f"Getting synctoazimuth with curr az = {self.curr_az}, target az = {target_az}")
+        print(f"Synctoazimuth with curr az = {self.curr_pos.az}, target az = {target_az}")
         checkok, res = self._check_azimuth(target_az)
         if not checkok:
             return res
         self._update_azimuth()
         self.ns.slewing = True
-        self.dome_calc.sync_on_position(self.curr_pos, target_az)
+        self.curr_pos = self.dome_calc.sync_on_position(self.curr_pos, target_az)
         # self.curr_az = target_az
         self.ns.slewing = False
-        #print(f"synctoazimuth after: curr az = {self.curr_az}, target az = {target_az}")
+        print(f"Synctoazimuth after: curr az = {self.curr_pos.az}, target az = {target_az}")
         return {'OK': True}
 

@@ -80,31 +80,26 @@ class TestDomeCalc(unittest.TestCase):
         LIMITS  = {Relay.LEFT_IDX: 180, Relay.RIGHT_IDX: 180}
         limitcounter = 0
 
-        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 10, LIMITS, limitcounter)
+        dir, diff = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 10, LIMITS, limitcounter)
         assert LIMITS[Relay.LEFT_IDX] == LIMITS[Relay.RIGHT_IDX] == 180
-        print(f"limitcounter: {limitcounter}")
-        assert limitcounter == 10
         assert dir == Relay.RIGHT_IDX and diff == 10
 
-        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 200, LIMITS, limitcounter)
-        print(f"limitcounter: {limitcounter}")
-        assert limitcounter == -150
+        limitcounter = 10
+        dir, diff = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 200, LIMITS, limitcounter)
         assert dir == Relay.LEFT_IDX and diff == 160
 
-        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.LEFT_IDX, 30, LIMITS, limitcounter)
-        print(f"{limitcounter=}, {dir=}, {diff=}")
-        assert limitcounter == -180
+        limitcounter = -150
+        dir, diff = calc.corrected_rotation_direction(Relay.LEFT_IDX, 30, LIMITS, limitcounter)
         assert dir == Relay.LEFT_IDX and diff == 30
 
-        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.LEFT_IDX, 1, LIMITS, limitcounter)
-        print(f"{limitcounter=}, {dir=}, {diff=}")
-        assert limitcounter == 179
+        limitcounter = -180
+        dir, diff = calc.corrected_rotation_direction(Relay.LEFT_IDX, 1, LIMITS, limitcounter)
         assert dir == Relay.RIGHT_IDX and diff == 359
 
-        dir, diff, limitcounter = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 2, LIMITS, limitcounter)
-        print(f"{limitcounter=}, {dir=}, {diff=}")
-        assert limitcounter == -179
+        limitcounter = 179
+        dir, diff = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 2, LIMITS, limitcounter)
         assert dir == Relay.LEFT_IDX and diff == 358
+
 
     def test_get_az(self):
         calc = DomeCalc()

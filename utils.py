@@ -28,6 +28,11 @@ def synchronized_method(method):
 
     return sync_method
 
+def smallest_diff(angle1, angle2):
+    """ smallest diff between 2 angles, including sign (minus is LEFT rotate) """
+    diff1 = (angle1 - angle2)%360
+    diff2 = (angle2 - angle1)%360
+    return min(diff1, diff2)
 
 class Relay(Enum):
     UP_IDX= 0

@@ -51,7 +51,6 @@ class DomeCalc:
         c = decimal.getcontext()
         # c.traps[decimal.FloatOperation] = True
         c.prec = 7
-        return
 
     def update_params(self, park_pos: DomePos, home_pos: DomePos, steps_per_turn, turns_per_rotation):
         """ Call this method before first use of the class. Initialises all parameters necessory for dome calculations """
@@ -79,7 +78,9 @@ class DomeCalc:
         self.north_pos.steps = int(Decimal(self.north_pos.rotpos - self.north_pos.turns) * self.steps_per_turn)
         self.complete_domepos(self.home_pos)
         self.complete_domepos(self.park_pos)
-        self.curr_pos = sync_pos
+        self.complete_domepos(sync_pos)
+        print(f"sync on position: {sync_pos=}")
+        return sync_pos
 
     # creates an is_complete domepos using only steps and turns (+ a fully inited calc class)
     def get_domepos(self, steps, turns):
@@ -106,13 +107,13 @@ class DomeCalc:
     def get_rotpos(self, steps, turns):
         """ takes steps and turns and calculates the rotpos """
         logging.debug(f"get_rotpos({Decimal(steps)/self.steps_per_turn=}, {turns=})")
-        return float(steps/self.steps_per_turn + turns)
+        return float(Decimal(steps)/self.steps_per_turn + Decimal(turns))
 
     def get_steps_turns(self, rotpos):
         """ takes steps and turns and calculates the rotpos """
         return float(Decimal(rotpos - int(rotpos))*self.steps_per_turn), int(rotpos)
 
-    def get_az(self, rotpos) -> int:
+    def get_az(self, rotpos) -> float:
         """ calculates the azimuth given a rotpos """
         result = float(((Decimal(rotpos) - Decimal(self.north_pos.rotpos))*Decimal(self.degree_per_turn)) % Decimal(360))
         # % doesn't work with decimals (returns negative degrees) so we convert before returning
@@ -146,16 +147,16 @@ class DomeCalc:
 
     def corrected_rotation_direction(self, direction, diff, limits, limitscounter):
         """ corrects dome rotation according to the current cable limits """
-        dir_sign = self._direction_sign(direction) # either 1 or -1
+        dir_sign = self.direction_sign(direction) # either 1 or -1
         if abs(limitscounter + dir_sign*diff) > limits[direction]:
             direction = self._direction_invert(direction)
             diff = 360 - diff
             dir_sign = dir_sign * -1 # invert sign
-        limitscounter = limitscounter + dir_sign*diff
+        # limitscounter = limitscounter + dir_sign*diff
         logging.info(f"corrected_rotation_direction result: {direction=}, {diff=}, {limitscounter=}")
-        return direction, diff, limitscounter
+        return direction, diff
 
-    def _direction_sign(self, direction:Relay):
+    def direction_sign(self, direction:Relay):
         """ Given a relay direction, return the other direction """
         if direction == Relay.LEFT_IDX:
             return -1
@@ -166,9 +167,6 @@ class DomeCalc:
         if direction == Relay.LEFT_IDX:
             return Relay.RIGHT_IDX
         return Relay.LEFT_IDX
-
-
-
 
     def __repr__(self):
         return f"DomeCalc Class:\n{self.park_pos=}\n{self.north_pos=}\n{self.home_pos=}\n{self.steps_per_turn=}\n \
