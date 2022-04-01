@@ -57,13 +57,13 @@ def rotation_to_direction(rotation):
         return Relay.LEFT_IDX
     return Relay.RIGHT_IDX    
 
-def direction_sign(self, direction:Relay):
+def direction_sign(direction:Relay):
     """ Given a relay direction, return the other direction """
     if direction == Relay.LEFT_IDX:
         return -1
     return 1
 
-def direction_invert(self, direction:Relay):
+def direction_invert(direction:Relay):
     """ Given a relay direction, return the other direction """
     if direction == Relay.LEFT_IDX:
         return Relay.RIGHT_IDX

@@ -2,7 +2,6 @@ import logging
 from dataclasses import dataclass
 import utils
 from utils import Relay
-from typing import Tuple
 import decimal
 from decimal import Decimal
 
@@ -40,11 +39,11 @@ class DomeCalc:
     park_pos: DomePos
     home_pos: DomePos
     north_pos: DomePos
-    steps_per_turn: Decimal = 0
-    turns_per_rotation: Decimal = 0
-    degree_per_turn: Decimal = 0
-    degree_per_step: Decimal = 0
-    turn_per_degree: Decimal = 0
+    steps_per_turn: Decimal = Decimal(0)
+    turns_per_rotation: Decimal = Decimal(0)
+    degree_per_turn: Decimal = Decimal(0)
+    degree_per_step: Decimal = Decimal(0)
+    turn_per_degree: Decimal = Decimal(0)
     LEFT = Relay.LEFT_IDX
     RIGHT = Relay.RIGHT_IDX
 
@@ -97,7 +96,7 @@ class DomeCalc:
         rotpos=Decimal(az) / self.degree_per_turn + Decimal(self.north_pos.rotpos)
         az = az
         steps, turns = self.get_steps_turns(rotpos)
-        result = DomePos(steps=steps, turns=turns, az=az, rotpos=rotpos)
+        result = DomePos(steps=int(steps), turns=turns, az=az, rotpos=float(rotpos))
         logging.info(f"Creating domepos for az: {result.az} deg ({steps=}, {turns=}, {rotpos=})")
         return result
 
@@ -139,27 +138,12 @@ class DomeCalc:
         """ corrects dome rotation according to the current cable limits """
         direction = utils.rotation_to_direction(rotation)
         limit = limits[direction]
-        diff = abs(rotation)
+        newrotation = abs(rotation)
         if abs(limitscounter + rotation) > limit:
             direction = utils.direction_invert(direction)
-            diff = 360 + rotation
-        logging.info(f"corrected_rotation_direction result: {rotation=}, {diff=}, {limitscounter=}")
-        return direction, diff
-
-
-    def direction_sign(self, direction:Relay):
-        """ Given a relay direction, return the other direction """
-        if direction == Relay.LEFT_IDX:
-            return -1
-        return 1
-
-
-    def _direction_invert(self, direction:Relay):
-        """ Given a relay direction, return the other direction """
-        if direction == Relay.LEFT_IDX:
-            return Relay.RIGHT_IDX
-        return Relay.LEFT_IDX
-
+            newrotation = (360 + rotation)%360
+        logging.info(f"corrected_rotation_direction result: {rotation=}, {newrotation=}, {limitscounter=}")
+        return newrotation 
 
     def __repr__(self):
         return f"DomeCalc Class:\n{self.park_pos=}\n{self.north_pos=}\n{self.home_pos=}\n{self.steps_per_turn=}\n \

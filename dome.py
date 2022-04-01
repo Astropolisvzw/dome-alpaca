@@ -11,6 +11,7 @@ import cachetools.func
 from multiprocessing import Manager
 from threading import Thread
 from utils import Relay
+import utils
 
 class Dome:
     connected = False
@@ -39,9 +40,7 @@ class Dome:
         park_pos, home_pos, spt, tpr, serial_port, serial_baud = self.load_settings()
         self.dome_calc.update_params(park_pos, home_pos, spt, tpr)
         self.dome_calc.sync_on_position(home_pos, home_pos.az)
-        self.serial_port = serial_port
-        self.serial_baud = serial_baud
-        self.set_serial_port(self.serial_port, self.serial_baud)
+        self.set_serial_port(serial_port, serial_baud)
         self.park_pos = park_pos
         self.home_pos = home_pos
         self.steps_per_turn = spt
@@ -53,10 +52,11 @@ class Dome:
         return self.ns.slewing
 
     def set_serial_port(self, serial_port, serial_baud):
-        if self.mc_serial is not None:
-            self.mc_serial.close()
         self.serial_port = serial_port
-        self.mc_serial = ArduinoSerial(self.serial_port, self.serial_baud)
+        self.serial_baud = serial_baud
+        if self.mc_serial is not None:
+           self.mc_serial.close()
+        self.mc_serial = ArduinoSerial(serial_port, serial_baud)
         self._save_settings()
 
     def _save_settings(self):
@@ -210,10 +210,10 @@ class Dome:
         self.ns.slewing = True
         self.ns.domeslewing = True
         ## get direction and distance
-        RELAY_IDX, diff = self._slew_update(self.ns.target_az)
+        rotation = self._slew_update(self.ns.target_az)
         logging.debug(f"Slewing to azimuth: {self.ns.target_az=}, {self.curr_pos.az=}")
-        while(diff > 0.5 and not self.ns.aborted):
-            logging.info(f"Slewing, diff is {diff}, {RELAY_IDX=}, {self.ns.target_az=}, {self.curr_pos.az=}")
+        while(abs(rotation) > 0.5 and not self.ns.aborted):
+            logging.info(f"Slewing, rotation is {rotation}, {self.ns.target_az=}, {self.curr_pos.az=}")
             ## enable relay in correct direction
             ## loop until distance < 0.5 degree OR takes too long
             self.mc_serial.enable_relay(RELAY_IDX, 10)
@@ -231,12 +231,12 @@ class Dome:
     def _slew_update(self, target_az: float):
         old_pos = self.curr_pos
         current_az = self.get_azimuth() # also updates
-        direction, diff = self.dome_calc.rotation_direction(current_az, target_az, self.LIMITS, self.ns.limitcounter)
-        dir_sign = self.dome_calc.direction_sign(direction) # either 1 or -1
+        rotation = self.dome_calc.rotation_direction(current_az, target_az, self.LIMITS, self.ns.limitcounter)
+        dir_sign = utils.direction_sign(direction) # either 1 or -1
         limitchange = dir_sign*abs(old_pos.az - current_az) if old_pos is not None else 0
         logging.info(f"Changing limitcounter with {limitchange} to {self.ns.limitcounter + limitchange}, {direction=}, {dir_sign=}, {old_pos.az=}, {current_az=}")
         self.ns.limitcounter = self.ns.limitcounter + limitchange
-        return direction, diff
+        return rotation
 
     def synctoazimuth(self, target_az: float):
         print(f"Synctoazimuth with curr az = {self.curr_pos.az}, target az = {target_az}")

@@ -53,23 +53,23 @@ class TestDomeCalc(unittest.TestCase):
         calc.update_params(park, home, steps_per_turn=1000, turns_per_rotation=36)
         calc.sync_on_position(home, 180)
 
-        dir, diff = calc.uncorrected_rotation_direction(90, 100)
-        assert dir == Relay.RIGHT_IDX and diff == 10
+        rotation = calc.uncorrected_rotation_direction(90, 100)
+        assert rotation == 10
 
-        dir, diff = calc.uncorrected_rotation_direction(90, 350)
-        assert dir == Relay.LEFT_IDX and diff == 100
+        rotation = calc.uncorrected_rotation_direction(90, 350)
+        assert rotation == -100
 
-        dir, diff = calc.uncorrected_rotation_direction(350, 10)
-        assert dir == Relay.RIGHT_IDX and diff == 20
+        rotation = calc.uncorrected_rotation_direction(350, 10)
+        assert rotation == 20
 
-        dir, diff = calc.uncorrected_rotation_direction(359, 0)
-        assert dir == Relay.RIGHT_IDX and diff == 1
+        rotation = calc.uncorrected_rotation_direction(359, 0)
+        assert rotation == 1
 
-        dir, diff = calc.uncorrected_rotation_direction(0, 180)
-        assert dir == Relay.LEFT_IDX and diff == 180
+        rotation = calc.uncorrected_rotation_direction(0, 180)
+        assert rotation == -180
 
-        dir, diff = calc.uncorrected_rotation_direction(10, 359)
-        assert dir == Relay.LEFT_IDX and diff == 11
+        rotation = calc.uncorrected_rotation_direction(10, 359)
+        assert rotation == 11
 
     def test_corrected_rotation_direction(self):
         calc = DomeCalc()
@@ -80,25 +80,25 @@ class TestDomeCalc(unittest.TestCase):
         LIMITS  = {Relay.LEFT_IDX: 180, Relay.RIGHT_IDX: 180}
         limitcounter = 0
 
-        dir, diff = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 10, LIMITS, limitcounter)
+        rotation = calc.corrected_rotation_direction(10, LIMITS, limitcounter)
         assert LIMITS[Relay.LEFT_IDX] == LIMITS[Relay.RIGHT_IDX] == 180
-        assert dir == Relay.RIGHT_IDX and diff == 10
+        assert rotation == 10
 
         limitcounter = 10
-        dir, diff = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 200, LIMITS, limitcounter)
-        assert dir == Relay.LEFT_IDX and diff == 160
+        rotation = calc.corrected_rotation_direction(200, LIMITS, limitcounter)
+        assert rotation == -160
 
         limitcounter = -150
-        dir, diff = calc.corrected_rotation_direction(Relay.LEFT_IDX, 30, LIMITS, limitcounter)
-        assert dir == Relay.LEFT_IDX and diff == 30
+        rotation = calc.corrected_rotation_direction(-30, LIMITS, limitcounter)
+        assert rotation == -30
 
         limitcounter = -180
-        dir, diff = calc.corrected_rotation_direction(Relay.LEFT_IDX, 1, LIMITS, limitcounter)
-        assert dir == Relay.RIGHT_IDX and diff == 359
+        rotation = calc.corrected_rotation_direction(-1, LIMITS, limitcounter)
+        assert rotation == 359
 
         limitcounter = 179
-        dir, diff = calc.corrected_rotation_direction(Relay.RIGHT_IDX, 2, LIMITS, limitcounter)
-        assert dir == Relay.LEFT_IDX and diff == 358
+        rotation = calc.corrected_rotation_direction(2, LIMITS, limitcounter)
+        assert rotation == -358
 
 
     def test_get_az(self):
