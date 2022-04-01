@@ -55,11 +55,17 @@ def best_rotation(origin, target):
 def rotation_to_direction(rotation):
     if rotation < 0:
         return Relay.LEFT_IDX
-    return Relay.RIGHT_IDX    
+    return Relay.RIGHT_IDX
 
 def direction_sign(direction:Relay):
     """ Given a relay direction, return the other direction """
     if direction == Relay.LEFT_IDX:
+        return -1
+    return 1
+
+def rotation_sign(rotation: float):
+    """ Given a relay direction, return the other direction """
+    if rotation < 0:
         return -1
     return 1
 

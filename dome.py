@@ -222,8 +222,8 @@ class Dome:
             _, diff = self._slew_update(self.ns.target_az)
             diffdiff = abs(diff - diffold)
             logging.info(f"After slewing, diff is {diff}, {self.ns.target_az=}, {self.curr_pos.az=} {RELAY_IDX=}, {self.ns.limitcounter=}")
-        logging.info(f"Slew done, diff is {diff}")
-        self.mc_serial.enable_relay(RELAY_IDX, 0) # stop dome slewing
+        logging.info(f"Slew done, diff is {rotation}")
+        self.mc_serial.enable_relay(utils.rotation_to_direction(rotation), 0) # stop dome slewing
         self.ns.slewing = False
         self.ns.domeslewing = False
         return {'OK': True}
@@ -232,9 +232,9 @@ class Dome:
         old_pos = self.curr_pos
         current_az = self.get_azimuth() # also updates
         rotation = self.dome_calc.rotation_direction(current_az, target_az, self.LIMITS, self.ns.limitcounter)
-        dir_sign = utils.direction_sign(direction) # either 1 or -1
+        dir_sign = utils.rotation_sign(rotation) # either 1 or -1
         limitchange = dir_sign*abs(old_pos.az - current_az) if old_pos is not None else 0
-        logging.info(f"Changing limitcounter with {limitchange} to {self.ns.limitcounter + limitchange}, {direction=}, {dir_sign=}, {old_pos.az=}, {current_az=}")
+        logging.info(f"Changing limitcounter with {limitchange} to {self.ns.limitcounter + limitchange}, {rotation=}, {dir_sign=}, {old_pos.az=}, {current_az=}")
         self.ns.limitcounter = self.ns.limitcounter + limitchange
         return rotation
 
