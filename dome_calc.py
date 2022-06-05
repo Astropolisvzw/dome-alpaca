@@ -94,7 +94,6 @@ class DomeCalc:
     # get a domepos with a given az
     def get_domepos_az(self, az):
         rotpos=Decimal(az) / self.degree_per_turn + Decimal(self.north_pos.rotpos)
-        az = az
         steps, turns = self.get_steps_turns(rotpos)
         result = DomePos(steps=int(steps), turns=turns, az=az, rotpos=float(rotpos))
         logging.info(f"Creating domepos for az: {result.az} deg ({steps=}, {turns=}, {rotpos=})")
@@ -131,7 +130,7 @@ class DomeCalc:
         """ calculates which direction the dome should turn """
         rotation = utils.best_rotation(current_az, target_az)
         logging.info(f"uncorrected_rotation_direction result: {rotation}")
-        return rotation 
+        return rotation
 
 
     def corrected_rotation_direction(self, rotation, limits, limitscounter):
@@ -143,7 +142,7 @@ class DomeCalc:
             direction = utils.direction_invert(direction)
             newrotation = (360 + rotation)%360
         logging.info(f"corrected_rotation_direction result: {rotation=}, {newrotation=}, {limitscounter=}")
-        return newrotation 
+        return newrotation
 
     def __repr__(self):
         return f"DomeCalc Class:\n{self.park_pos=}\n{self.north_pos=}\n{self.home_pos=}\n{self.steps_per_turn=}\n \

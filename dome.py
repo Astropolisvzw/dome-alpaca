@@ -22,7 +22,7 @@ class Dome:
     mc_serial: ArduinoSerial = None
     dome_calc = DomeCalc()
     config_file: str = ''
-    LIMITS  = {Relay.LEFT_IDX: 180, Relay.RIGHT_IDX: 180} # should be static
+    LIMITS  = {Relay.LEFT_IDX: 1800000, Relay.RIGHT_IDX: 1800000} # should be static
     conformance = False
 
     manager = Manager()
@@ -177,6 +177,7 @@ class Dome:
     def _update_azimuth(self):
         steps, check1 = self.mc_serial.get_steps()
         turns, check2 = self.mc_serial.get_turns()
+        logging.debug(f"Update azimuth: {steps}, {check1}, {turns}, {check2}")
         if check1 and check2:
             self.curr_pos = self.dome_calc.get_domepos(steps, turns)
             logging.debug(f"Dome updating azimuth: {steps=}, {turns=}, {self.curr_pos=}")
