@@ -217,12 +217,12 @@ class Dome:
             logging.info(f"Slewing, rotation is {rotation}, {self.ns.target_az=}, {self.curr_pos.az=}")
             ## enable relay in correct direction
             ## loop until distance < 0.5 degree OR takes too long
-            self.mc_serial.enable_relay(RELAY_IDX, 10)
+            #self.mc_serial.enable_relay(RELAY_IDX, 10)
+            self.mc_serial.enable_relay(utils.rotation_to_direction(rotation), 10) # stop dome slewing
             sleep(1)
-            diffold = diff
-            _, diff = self._slew_update(self.ns.target_az)
-            diffdiff = abs(diff - diffold)
-            logging.info(f"After slewing, diff is {diff}, {self.ns.target_az=}, {self.curr_pos.az=} {RELAY_IDX=}, {self.ns.limitcounter=}")
+            sleep(1)
+            rotation = self._slew_update(self.ns.target_az)
+            #logging.info(f"After slewing, diff is {diff}, {self.ns.target_az=}, {self.curr_pos.az=} {RELAY_IDX=}, {self.ns.limitcounter=}")
         logging.info(f"Slew done, diff is {rotation}")
         self.mc_serial.enable_relay(utils.rotation_to_direction(rotation), 0) # stop dome slewing
         self.ns.slewing = False
